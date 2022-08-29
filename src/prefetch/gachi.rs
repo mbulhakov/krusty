@@ -19,7 +19,7 @@ pub async fn ogg() -> Result<HashMap<String, Bytes>, Box<dyn Error>> {
         let name = file
             .enclosed_name()
             .and_then(|x| x.to_str())
-            .and_then(|x| Some(x.to_string()));
+            .map(|x| x.to_string());
 
         let name = match name {
             None => continue,
@@ -38,5 +38,5 @@ pub async fn ogg() -> Result<HashMap<String, Bytes>, Box<dyn Error>> {
         result.insert(name, buf.into_inner().freeze());
     }
 
-    return Ok(result);
+    Ok(result)
 }
