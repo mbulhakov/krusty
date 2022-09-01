@@ -1,22 +1,10 @@
 use bytes::Bytes;
 use krusty::prefetch::gachi::ogg;
-use rand::Rng;
+use krusty::similar::find_similar;
 use std::collections::HashMap;
-use std::convert::Into;
 use std::error::Error;
 use std::sync::Arc;
-use teloxide::{prelude::*, types::InputFile, utils::command::BotCommands};
-
-#[derive(BotCommands, Clone)]
-#[command(rename = "lowercase", description = "These commands are supported:")]
-enum Command {
-    #[command(description = "Display this text")]
-    Help,
-    #[command(description = "Says hello to fucking slaves")]
-    Hello,
-    #[command(description = "Sends a voice mail to fucking slaves")]
-    Gachi,
-}
+use teloxide::{prelude::*, types::InputFile};
 
 #[tokio::main]
 async fn main() {
@@ -25,26 +13,17 @@ async fn main() {
 
     let bot = Bot::from_env().auto_send();
 
-    let gachi_ogg: Vec<Bytes> = match ogg().await {
+    let gachi_ogg: HashMap<String, Bytes> = match ogg().await {
         Ok(m) => m,
         Err(e) => {
             log::warn!("Failed to get gachi ogg: {}", e);
             HashMap::new()
         }
-    }
-    .values()
-    .cloned()
-    .collect();
+    };
 
     let gachi_ogg = Arc::new(gachi_ogg);
 
-    let handler = Update::filter_message().branch(
-        dptree::entry()
-            // Filter commands: the next handlers will receive a parsed `Command`.
-            .filter_command::<Command>()
-            // If a command parsing fails, this handler will not be executed.
-            .endpoint(answer),
-    );
+    let handler = Update::filter_message().branch(dptree::entry().endpoint(answer));
 
     Dispatcher::builder(bot, handler)
         // Pass the shared state to the handler as a dependency.
@@ -58,29 +37,19 @@ async fn main() {
 async fn answer(
     message: Message,
     bot: AutoSend<Bot>,
-    command: Command,
-    gachi_ogg: Arc<Vec<Bytes>>,
+    gachi_ogg: Arc<HashMap<String, Bytes>>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    match command {
-        Command::Help => {
-            bot.send_message(message.chat.id, Command::descriptions().to_string())
-                .await?
+    if gachi_ogg.is_empty() {
+        return Ok(());
+    }
+
+    if let Some(mut id) = find_similar(message.text().unwrap()) {
+        id.push_str(".ogg");
+        if let Some(ogg) = gachi_ogg.get(&id) {
+            bot.send_voice(message.chat.id, InputFile::memory(ogg.clone()))
+                .await?;
         }
-        Command::Hello => {
-            bot.send_message(message.chat.id, "Hello, ♂slaves♂!")
-                .await?
-        }
-        Command::Gachi => {
-            if gachi_ogg.is_empty() {
-                bot.send_message(message.chat.id, "Fuck you, ♂slaves♂!")
-                    .await?
-            } else {
-                let idx = rand::thread_rng().gen::<usize>() % gachi_ogg.len();
-                bot.send_voice(message.chat.id, InputFile::memory(gachi_ogg[idx].clone()))
-                    .await?
-            }
-        }
-    };
+    }
 
     Ok(())
 }
