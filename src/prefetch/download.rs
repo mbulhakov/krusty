@@ -53,7 +53,6 @@ pub async fn download_gachi_from_drive() -> Result<Vec<u8>, Box<dyn Error>> {
 
     let resp = client
         .post("https://oauth2.googleapis.com/token")
-        .header("content-type", "application/x-www-form-urlencoded")
         .form(&token_params)
         .send()
         .await?;
@@ -73,7 +72,7 @@ pub async fn download_gachi_from_drive() -> Result<Vec<u8>, Box<dyn Error>> {
     let resp = client
         .get("https://www.googleapis.com/drive/v3/files?")
         .query(&[("key", api_key.as_str())])
-        .header("Authorization", format!("Bearer {}", token))
+        .bearer_auth(token.clone())
         .send()
         .await?;
 
@@ -96,14 +95,14 @@ pub async fn download_gachi_from_drive() -> Result<Vec<u8>, Box<dyn Error>> {
             let resp = client
                 .get(format!("https://www.googleapis.com/drive/v3/files/{}", id))
                 .query(&[("key", api_key.as_str()), ("alt", "media")])
-                .header("Authorization", format!("Bearer {}", token))
+                .bearer_auth(token)
                 .send()
                 .await?;
 
             if resp.status() >= reqwest::StatusCode::BAD_REQUEST {
                 return Err(Box::new(DownloadError {
                     description: format!(
-                        "Failed to get file list, status {}: {}",
+                        "Failed to get file, status {}: {}",
                         resp.status(),
                         resp.text().await?
                     ),
