@@ -34,7 +34,7 @@ fn get_max_score(tag: &str, words: &[String]) -> Option<OrderedFloat<f64>> {
 }
 
 fn maybe_special_case(w: &str) -> Option<&str> {
-    if Regex::new(r"mм{2,}").unwrap().is_match(w) {
+    if Regex::new(r"[mм]{2,}").unwrap().is_match(w) {
         return Some("Mmmmh");
     } else if w.contains('♂') || Regex::new(r"[аоao]{2,}").unwrap().is_match(w) {
         let orgasms = vec![
