@@ -2,6 +2,7 @@ use bytes::Bytes;
 use krusty::prefetch::gachi::ogg;
 use krusty::similar::find_similar;
 use std::collections::HashMap;
+use std::env;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -10,6 +11,7 @@ use teloxide::{prelude::*, types::InputFile};
 struct Ctx {
     gachi: HashMap<String, Bytes>,
     chat_gachi_time: Mutex<HashMap<ChatId, Instant>>,
+    gachi_timeout_sec: u64,
 }
 
 #[tokio::main]
@@ -30,6 +32,8 @@ async fn main() {
     let ctx = Arc::new(Ctx {
         gachi: gachi_ogg,
         chat_gachi_time: Mutex::new(HashMap::new()),
+        gachi_timeout_sec: env::var("GACHI_TIMEOUT_SEC")
+            .map_or_else(|_| 30, |x| x.parse().unwrap()),
     });
 
     let handler = dptree::entry().branch(Update::filter_message().endpoint(answer));
@@ -58,7 +62,7 @@ async fn answer(
         log::debug!("Locking gachi mutex");
         let mut chat_times = ctx.chat_gachi_time.lock().unwrap();
         if let Some(time) = chat_times.get(&message.chat.id) {
-            if time.elapsed() < Duration::from_secs(30) {
+            if time.elapsed() < Duration::from_secs(ctx.gachi_timeout_sec) {
                 return Ok(());
             }
         }
