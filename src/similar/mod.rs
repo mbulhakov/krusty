@@ -12,7 +12,7 @@ fn is_special(ch: char) -> bool {
 }
 
 fn score(x: &str, y: &str) -> f64 {
-    levenshtein(x, y) as f64 / max(x.len(), y.len()) as f64
+    levenshtein(x, y) as f64 / max(x.chars().count(), y.chars().count()) as f64
 }
 
 fn split_on_tokens(message: &str) -> Vec<String> {
@@ -60,7 +60,7 @@ fn extract_special_cases(words: &[String]) -> Vec<&str> {
         .collect()
 }
 
-struct Entry {
+struct GachiEntry {
     id: String,
     tag: String,
 }
@@ -94,13 +94,13 @@ pub fn find_similar(message: &str) -> Option<String> {
     }
 
     let parsed: Value = serde_json::from_str(base).unwrap();
-    let obj = parsed.as_object().unwrap().to_owned();
+    let json = parsed.as_object().unwrap().to_owned();
 
     let mut names_to_scores = BTreeMap::new();
 
-    for (k, v) in obj.iter() {
+    for (k, v) in json.iter() {
         let mut scores = Vec::new();
-        for tag in v.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()) {
+        for tag in v.as_array().unwrap().iter().map(|x| x.as_str().unwrap()) {
             if let Some(OrderedFloat(score)) = get_max_score(&tag, &tokens) {
                 if score <= 0.26f64 {
                     scores.push((OrderedFloat::from(score), k, tag));
@@ -111,9 +111,9 @@ pub fn find_similar(message: &str) -> Option<String> {
             names_to_scores
                 .entry(OrderedFloat::from(f))
                 .or_insert(Vec::new())
-                .push(Entry {
+                .push(GachiEntry {
                     id: id.clone(),
-                    tag,
+                    tag: tag.to_string(),
                 });
         }
     }
@@ -124,7 +124,7 @@ pub fn find_similar(message: &str) -> Option<String> {
 
             let entry = &entries[rand::thread_rng().gen::<usize>() % entries.len()];
             log::debug!(
-                "Find a similarity, '{}', tag '{}' with score {}, tag: '{}'",
+                "Found a similarity: {{id: '{}', tag '{}', score {}, message: '{}'}}",
                 entry.id,
                 entry.tag,
                 score,
@@ -133,5 +133,19 @@ pub fn find_similar(message: &str) -> Option<String> {
             Some(entry.id.to_owned())
         }
         None => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unicode_scoring() {
+        // expected results as: number of modifications / max len of string
+        assert_eq!(score("как", "кам"), 1f64 / 3f64);
+        assert_eq!(score("мультикам", "кам"), 6f64 / 9f64);
+        assert_eq!(score("сука", "ура"), 2f64 / 4f64);
+        assert_eq!(score("hhhhрррр", "hр"), 6f64 / 8f64);
     }
 }
