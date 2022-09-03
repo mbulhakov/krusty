@@ -1,17 +1,22 @@
 use bytes::Bytes;
+use chrono::{prelude::*, Duration};
 use krusty::prefetch::gachi::ogg;
 use krusty::similar::find_similar;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 use teloxide::{prelude::*, types::InputFile};
 
 struct Ctx {
     gachi: HashMap<String, Bytes>,
-    chat_gachi_time: Mutex<HashMap<ChatId, Instant>>,
-    gachi_timeout_sec: u64,
+    chat_gachi_time: Mutex<HashMap<ChatId, DateTime<Utc>>>,
+    gachi_timeout_sec: i64,
+}
+
+fn is_time_passed(datetime: &DateTime<Utc>, duration: &Duration) -> bool {
+    Utc::now().signed_duration_since(*datetime).cmp(duration) == Ordering::Greater
 }
 
 #[tokio::main]
@@ -29,17 +34,29 @@ async fn main() {
         }
     };
 
+    let gachi_timeout_sec =
+        env::var("GACHI_TIMEOUT_SEC").map_or_else(|_| 30, |x| x.parse().unwrap());
+    let ignore_message_older_then_sec =
+        env::var("IGNORE_MESSAGE_OLDER_THEN_SEC").map_or_else(|_| 60, |x| x.parse().unwrap());
+
+    if gachi_timeout_sec > ignore_message_older_then_sec {
+        panic!("Voice timeout is greater then 'ignore message older then': {gachi_timeout_sec} > {ignore_message_older_then_sec}");
+    }
+
     let ctx = Arc::new(Ctx {
         gachi: gachi_ogg,
         chat_gachi_time: Mutex::new(HashMap::new()),
-        gachi_timeout_sec: env::var("GACHI_TIMEOUT_SEC")
-            .map_or_else(|_| 30, |x| x.parse().unwrap()),
+        gachi_timeout_sec,
     });
 
-    let handler = dptree::entry().branch(Update::filter_message().endpoint(answer));
+    let handler = Update::filter_message().branch(
+        dptree::filter(move |msg: Message, _: Arc<Ctx>| {
+            !is_time_passed(&msg.date, &Duration::seconds(ignore_message_older_then_sec))
+        })
+        .endpoint(answer),
+    );
 
     Dispatcher::builder(bot, handler)
-        // Pass the shared state to the handler as a dependency.
         .dependencies(dptree::deps![ctx])
         .enable_ctrlc_handler()
         .build()
@@ -62,11 +79,11 @@ async fn answer(
         log::debug!("Locking gachi mutex");
         let mut chat_times = ctx.chat_gachi_time.lock().unwrap();
         if let Some(time) = chat_times.get(&message.chat.id) {
-            if time.elapsed() < Duration::from_secs(ctx.gachi_timeout_sec) {
+            if !is_time_passed(time, &Duration::seconds(ctx.gachi_timeout_sec)) {
                 return Ok(());
             }
         }
-        chat_times.insert(message.chat.id, Instant::now());
+        chat_times.insert(message.chat.id, Utc::now());
     }
 
     if let Some(text) = message.text() {

@@ -34,9 +34,9 @@ fn get_max_score(tag: &str, words: &[String]) -> Option<OrderedFloat<f64>> {
 }
 
 fn maybe_special_case(w: &str) -> Option<&str> {
-    if Regex::new(r"[mм]{2,}").unwrap().is_match(w) {
+    if Regex::new(r"^[mм]{2,}$").unwrap().is_match(w) {
         return Some("Mmmmh");
-    } else if w.contains('♂') || Regex::new(r"[аоao]{2,}").unwrap().is_match(w) {
+    } else if w.contains('♂') || Regex::new(r"^[аоao]{2,}$").unwrap().is_match(w) {
         let orgasms = vec![
             "Orgasm 1",
             "Orgasm 2",
@@ -101,7 +101,7 @@ pub fn find_similar(message: &str) -> Option<String> {
     for (k, v) in json.iter() {
         let mut scores = Vec::new();
         for tag in v.as_array().unwrap().iter().map(|x| x.as_str().unwrap()) {
-            if let Some(OrderedFloat(score)) = get_max_score(&tag, &tokens) {
+            if let Some(OrderedFloat(score)) = get_max_score(tag, &tokens) {
                 if score <= 0.26f64 {
                     scores.push((OrderedFloat::from(score), k, tag));
                 }
@@ -147,5 +147,17 @@ mod tests {
         assert_eq!(score("мультикам", "кам"), 6f64 / 9f64);
         assert_eq!(score("сука", "ура"), 2f64 / 4f64);
         assert_eq!(score("hhhhрррр", "hр"), 6f64 / 8f64);
+    }
+
+    #[test]
+    fn test_maybe_special_case() {
+        assert_eq!(maybe_special_case("ecommerce"), None);
+        assert_eq!(maybe_special_case("екомммммерц"), None);
+        assert_eq!(maybe_special_case("haaaalloooo"), None);
+
+        assert_ne!(maybe_special_case("мmmм"), None);
+        assert_ne!(maybe_special_case("оаoa"), None);
+        assert_ne!(maybe_special_case("оооааа"), None);
+        assert_ne!(maybe_special_case("string♂"), None);
     }
 }
