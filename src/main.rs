@@ -1,5 +1,7 @@
 use bytes::Bytes;
 use chrono::{prelude::*, Duration};
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Request, Response, Server};
 use krusty::prefetch::gachi::ogg;
 use krusty::similar::find_similar;
 use std::cmp::Ordering;
@@ -7,6 +9,7 @@ use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
+use std::{convert::Infallible, net::SocketAddr};
 use teloxide::{prelude::*, types::InputFile};
 
 struct Ctx {
@@ -17,6 +20,10 @@ struct Ctx {
 
 fn is_time_passed(datetime: &DateTime<Utc>, duration: &Duration) -> bool {
     Utc::now().signed_duration_since(*datetime).cmp(duration) == Ordering::Greater
+}
+
+async fn handle(_: Request<Body>) -> Result<Response<Body>, Infallible> {
+    Ok(Response::new(Body::from("")))
 }
 
 #[tokio::main]
@@ -55,6 +62,10 @@ async fn main() {
         })
         .endpoint(answer),
     );
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let make_service = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(handle)) });
+    let _ = Server::bind(&addr).serve(make_service);
 
     Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![ctx])

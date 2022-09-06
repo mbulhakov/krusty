@@ -4,7 +4,8 @@
 FROM rust:latest AS builder
 
 RUN rustup target add x86_64-unknown-linux-musl
-RUN apt update && apt-get -y install build-essential && apt install -y musl-tools musl-dev && apt install -y libssl-dev && apt install -y pkg-config
+RUN apt update && apt-get -y install build-essential && apt install -y musl-tools musl-dev
+RUN apt-get install -y libssl-dev && apt install -y pkg-config
 RUN update-ca-certificates
 
 # Create appuser
@@ -33,10 +34,9 @@ RUN cargo --version --verbose
 RUN rustc --version
 RUN cargo clippy --version
 
-RUN cargo check
+RUN cargo check --target x86_64-unknown-linux-musl --release
 RUN cargo clippy -- -D warnings
-RUN cargo test --all
-
+RUN cargo test --target x86_64-unknown-linux-musl --release
 RUN cargo build --target x86_64-unknown-linux-musl --release
 
 ####################################################################################################

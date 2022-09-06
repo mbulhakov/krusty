@@ -21,6 +21,7 @@ regex = "1"
 teloxide = { version = "0.10", features = ["macros", "auto-send"] }
 tokio = { version =  "1.8", features = ["rt-multi-thread", "macros"] }
 zip = "0.6.2"
+hyper = { version = "0.14.20", features = ["server"] }
 
-[target.x86_64-unknown-linux-musl.dependencies]
+[target.'cfg(unix)'.dependencies]
 openssl = { version = "0.10.41", features = ["vendored"] }
