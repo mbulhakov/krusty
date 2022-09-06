@@ -25,6 +25,18 @@ WORKDIR /krusty
 
 COPY ./ .
 
+RUN rustup update
+RUN rustup component add clippy
+RUN rustup install nightly
+
+RUN cargo --version --verbose
+RUN rustc --version
+RUN cargo clippy --version
+
+RUN cargo check
+RUN cargo clippy -- -D warnings
+RUN cargo test --all
+
 RUN cargo build --target x86_64-unknown-linux-musl --release
 
 ####################################################################################################
