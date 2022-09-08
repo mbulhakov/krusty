@@ -13,4 +13,4 @@ jobs:
     steps:
         - uses: actions/checkout@v2
         - uses: superfly/flyctl-actions/setup-flyctl@master
-        - run: flyctl deploy --local-only
+        - run: flyctl deploy --local-only --detach --strategy=immediate
