@@ -53,6 +53,8 @@ WORKDIR /krusty
 # Copy our build
 COPY --from=builder /krusty/target/x86_64-unknown-linux-musl/release/krusty ./
 
+COPY ./GSP.zip ./
+
 # Use an unprivileged user.
 USER krusty:krusty
 
