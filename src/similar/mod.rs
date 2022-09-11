@@ -68,18 +68,19 @@ struct GachiEntry {
 pub fn find_similar(message: &str) -> Option<String> {
     let base: &'static str = r#"
 {
-  "come on lets go": ["go", "го", "поехали"],
+  "come on lets go": ["go", "го", "поехали", "погнали"],
   "Fisting is 300 $": ["фистинг", "300", "баксы", "бакинские"],
-  "FUCK YOU": ["нахуй", "впизду", "на хуй", "fuck you"],
-  "fuck you...": ["нахуй", "впизду", "на хуй", "fuck you"],
-  "Fucking slaves get your ass back here": ["слейвс", "slaves", "асс", "эс", "ass", "назад"],
-  "Iam cumming": ["кам", "камминг", "кончаю"],
+  "FUCK YOU": ["нахуй", "впизду", "fuck you"],
+  "fuck you...": ["нахуй", "впизду", "fuck you"],
+  "Fucking slaves get your ass back here": ["слейвс", "slaves", "асс", "эс", "ass"],
+  "Iam cumming": ["кам", "камминг", "кончаю", "cum", "cumming", "coming", "come"],
+  "Swallow my cum": ["кам", "камминг", "кончаю", "cum", "cumming", "coming", "come"],
   "Id be right happy to": ["радостью", "залюбкы", "залюбки", "happy"],
   "It gets bigger when i pull on it": ["хуй", "тяну", "большой"],
   "Its so fucking deep": ["глубоко", "факинг", "fucking", "дип", "deep"],
   "Lets suck some dick": ["ура", "поздравляю", "поздравления", "наконец-то", "наконецто"],
   "Oh shit iam sorry": ["сори", "сорян", "извини", "извините", "sorry"],
-  "Our daddy told us not to be ashamed": ["стыдно", "стыдоба", "неудобно"],
+  "Our daddy told us not to be ashamed": ["стыдно", "стыдоба", "неудобно", "стыдиться"],
   "Sometimes i rip the skin": ["хуй", "тяну"],
   "Sorry for what": ["сори", "сорян", "извини", "извините", "sorry"]
 }"#;
