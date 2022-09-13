@@ -103,9 +103,13 @@ async fn answer(
     if let Some(mut id) = find_similar(&token_provider) {
         id.push_str(".ogg");
         if let Some(ogg) = ctx.gachi.get(&id) {
-            bot.send_voice(chat_id, InputFile::memory(ogg.clone()))
-                .reply_to_message_id(message_id)
-                .await?;
+            if rand::random::<i32>() % 2 == 0 {
+                bot.send_voice(chat_id, InputFile::memory(ogg.clone()))
+                    .reply_to_message_id(message_id)
+                    .await?;
+            } else {
+                log::info!("There was a match, but it was omitted due to random chance of 50%");
+            }
         } else {
             log::warn!("{} was not found", id);
         }
