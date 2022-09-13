@@ -1,2 +1,2 @@
 pub mod prefetch;
-pub mod similar;
+pub mod similarity;

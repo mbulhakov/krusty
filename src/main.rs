@@ -3,7 +3,7 @@ use chrono::{prelude::*, Duration};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use krusty::prefetch::gachi::ogg;
-use krusty::similar::find_similar;
+use krusty::similarity::{find_similar, token_provider};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::env;
@@ -97,16 +97,17 @@ async fn answer(
         chat_times.insert(message.chat.id, Utc::now());
     }
 
-    if let Some(text) = message.text() {
-        if let Some(mut id) = find_similar(text) {
-            id.push_str(".ogg");
-            if let Some(ogg) = ctx.gachi.get(&id) {
-                bot.send_voice(message.chat.id, InputFile::memory(ogg.clone()))
-                    .reply_to_message_id(message.id)
-                    .await?;
-            } else {
-                log::warn!("{} was not found", id);
-            }
+    let chat_id = message.chat.id;
+    let message_id = message.id;
+    let token_provider = token_provider::MessageTokenProvider::new(message);
+    if let Some(mut id) = find_similar(&token_provider) {
+        id.push_str(".ogg");
+        if let Some(ogg) = ctx.gachi.get(&id) {
+            bot.send_voice(chat_id, InputFile::memory(ogg.clone()))
+                .reply_to_message_id(message_id)
+                .await?;
+        } else {
+            log::warn!("{} was not found", id);
         }
     }
 

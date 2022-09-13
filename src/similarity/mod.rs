@@ -1,3 +1,5 @@
+pub mod token_provider;
+
 use levenshtein::levenshtein;
 use ordered_float::OrderedFloat;
 use rand::Rng;
@@ -7,20 +9,10 @@ use serde_json::Value;
 use std::cmp::max;
 use std::collections::BTreeMap;
 
-fn is_special(ch: char) -> bool {
-    (' '..='/').contains(&ch) || (':'..='@').contains(&ch) || ('\\'..='`').contains(&ch)
-}
+use self::token_provider::TokenProvider;
 
 fn score(x: &str, y: &str) -> f64 {
     levenshtein(x, y) as f64 / max(x.chars().count(), y.chars().count()) as f64
-}
-
-fn split_on_tokens(message: &str) -> Vec<String> {
-    message
-        .split(is_special)
-        .map(|s| s.to_string().to_lowercase())
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<String>>()
 }
 
 fn get_max_score(tag: &str, words: &[String]) -> Option<OrderedFloat<f64>> {
@@ -65,7 +57,7 @@ struct GachiEntry {
     tag: String,
 }
 
-pub fn find_similar(message: &str) -> Option<String> {
+pub fn find_similar<T: TokenProvider>(provider: &T) -> Option<String> {
     let base: &'static str = r#"
 {
   "come on lets go": ["go", "го", "поехали", "погнали"],
@@ -85,7 +77,7 @@ pub fn find_similar(message: &str) -> Option<String> {
   "Sorry for what": ["сори", "сорян", "извини", "извините", "sorry"]
 }"#;
 
-    let tokens = split_on_tokens(message);
+    let tokens = provider.provide_owned();
 
     let special_cases = extract_special_cases(&tokens);
     if !special_cases.is_empty() {
@@ -125,11 +117,10 @@ pub fn find_similar(message: &str) -> Option<String> {
 
             let entry = &entries[rand::thread_rng().gen::<usize>() % entries.len()];
             log::debug!(
-                "Found a similarity: {{id: '{}', tag '{}', score {}, message: '{}'}}",
+                "Found a similarity: {{id: '{}', tag '{}', score {}}}",
                 entry.id,
                 entry.tag,
-                score,
-                message
+                score
             );
             Some(entry.id.to_owned())
         }
