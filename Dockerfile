@@ -4,7 +4,7 @@
 FROM rust:latest AS builder
 
 RUN rustup target add x86_64-unknown-linux-musl
-RUN apt update && apt-get -y install build-essential && apt install -y musl-tools musl-dev
+RUN apt update && apt-get -y install build-essential && apt install -y musl-tools musl-dev && apt install -y libpq-dev
 RUN apt-get install -y libssl-dev && apt install -y pkg-config
 RUN update-ca-certificates
 

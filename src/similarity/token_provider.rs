@@ -6,7 +6,7 @@ fn is_special(ch: char) -> bool {
 }
 
 pub trait TokenProvider {
-    fn provide_owned(&self) -> Vec<String>;
+    fn provide(&self) -> Vec<String>;
 }
 
 pub struct MessageTokenProvider {
@@ -20,12 +20,14 @@ impl MessageTokenProvider {
 }
 
 impl TokenProvider for MessageTokenProvider {
-    fn provide_owned(&self) -> Vec<String> {
-        let urls = self
+    fn provide(&self) -> Vec<String> {
+        let entities = self
             .message
             .parse_entities()
             .or_else(|| self.message.parse_caption_entities())
-            .unwrap_or_default()
+            .unwrap_or_default();
+
+        let urls = entities
             .iter()
             .filter(|x| x.kind() == &MessageEntityKind::Url)
             .map(|x| x.text())
