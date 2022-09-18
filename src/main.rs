@@ -32,8 +32,9 @@ async fn handle(_: Request<Body>) -> Result<Response<Body>, Infallible> {
 }
 
 fn connection() -> PgConnection {
-    PgConnection::establish(&env::var("DATABASE_URL").expect("DATABASE_URL is not set"))
-        .expect("Failed to obtain connection")
+    let uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+    log::debug!("PG uri: {}", uri);
+    PgConnection::establish(&uri).expect("Failed to obtain connection")
 }
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();

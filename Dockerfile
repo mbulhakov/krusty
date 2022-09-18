@@ -8,7 +8,6 @@ RUN apt update && apt-get -y install build-essential && apt install -y libpq-dev
 RUN apt-get install -y libssl-dev
 RUN update-ca-certificates
 
-# Create appuser
 ENV USER=krusty
 ENV UID=10001
 
@@ -47,16 +46,16 @@ FROM ubuntu:latest
 RUN apt update && apt-get -y install build-essential && apt install -y libpq-dev
 RUN apt-get install -y libssl-dev
 
-# Import from builder.
+RUN apt install -y --reinstall ca-certificates
+RUN update-ca-certificates
+
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 
 WORKDIR /krusty
 
-# Copy our build
 COPY --from=builder /krusty/target/release/krusty ./
 
-# Use an unprivileged user.
 USER krusty:krusty
 
 CMD ["/krusty/krusty"]
