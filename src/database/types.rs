@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use diesel_derive_enum::*;
 
-#[derive(Debug, PartialEq, DbEnum)]
+#[derive(Debug, PartialEq, Eq, DbEnum)]
 #[DieselTypePath = "crate::schema::sql_types::TagType"]
 pub enum TagType {
     Ordinary,
@@ -14,7 +14,7 @@ pub struct Tag {
     pub type_: TagType,
 }
 
-#[derive(Debug, PartialEq, DbEnum, Clone)]
+#[derive(Debug, PartialEq, Eq, DbEnum, Clone)]
 #[DieselTypePath = "crate::schema::sql_types::MediaType"]
 pub enum MediaType {
     Voice,
