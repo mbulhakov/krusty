@@ -4,8 +4,8 @@
 FROM rust:latest AS builder
 
 RUN rustup target add x86_64-unknown-linux-musl
-RUN apt update && apt-get -y install build-essential && apt install -y musl-tools musl-dev && apt install -y libpq-dev
-RUN apt-get install -y libssl-dev && apt install -y pkg-config
+RUN apt update && apt-get -y install build-essential && apt install -y libpq-dev
+RUN apt-get install -y libssl-dev
 RUN update-ca-certificates
 
 # Create appuser
@@ -34,15 +34,18 @@ RUN cargo --version --verbose
 RUN rustc --version
 RUN cargo clippy --version
 
-RUN cargo check --target x86_64-unknown-linux-musl --release
+RUN cargo check --release
 RUN cargo clippy -- -D warnings
-RUN cargo test --target x86_64-unknown-linux-musl --release
-RUN cargo build --target x86_64-unknown-linux-musl --release
+RUN cargo test --release
+RUN cargo build --release
 
 ####################################################################################################
 ## Final image
 ####################################################################################################
-FROM alpine:latest
+FROM ubuntu:latest
+
+RUN apt update && apt-get -y install build-essential && apt install -y libpq-dev
+RUN apt-get install -y libssl-dev
 
 # Import from builder.
 COPY --from=builder /etc/passwd /etc/passwd
@@ -51,7 +54,7 @@ COPY --from=builder /etc/group /etc/group
 WORKDIR /krusty
 
 # Copy our build
-COPY --from=builder /krusty/target/x86_64-unknown-linux-musl/release/krusty ./
+COPY --from=builder /krusty/target/release/krusty ./
 
 # Use an unprivileged user.
 USER krusty:krusty
