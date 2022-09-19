@@ -125,13 +125,12 @@ async fn answer(
     let token_provider = token_provider::MessageTokenProvider::new(message);
     if let Some(tag) = recognize_tag_in_tokens(&token_provider, &tag_provider) {
         if let Some(media) = get_random_media_info_for_tag(&tag, &mut repository) {
+            let data = repository
+            .media_data_by_name(&media.name)
+            .expect("Data was not found for voice media");
             match media.type_ {
                 MediaType::Voice => {
-                    let ogg = repository
-                        .media_data_by_name(&media.name)
-                        .expect("Data was not found for voice media");
-
-                    bot.send_voice(chat_id, InputFile::memory(Bytes::from(ogg)))
+                    bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
                         .reply_to_message_id(message_id)
                         .await?;
                 }
@@ -139,7 +138,9 @@ async fn answer(
                     log::warn!("Unsupported media type");
                 }
                 MediaType::Video => {
-                    log::warn!("Unsupported media type");
+                    bot.send_video(chat_id, InputFile::memory(Bytes::from(data)))
+                        .reply_to_message_id(message_id)
+                        .await?;
                 }
             }
         }
