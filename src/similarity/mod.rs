@@ -1,15 +1,15 @@
 pub mod tag_provider;
 pub mod token_provider;
 
+use self::tag_provider::TagProvider;
+use self::token_provider::TokenProvider;
 use levenshtein::levenshtein;
 use ordered_float::OrderedFloat;
 use rand::Rng;
 use regex::Regex;
 use std::cmp::max;
 use std::collections::BTreeMap;
-
-use self::tag_provider::TagProvider;
-use self::token_provider::TokenProvider;
+use std::env;
 
 fn score(x: &str, y: &str) -> f64 {
     levenshtein(x, y) as f64 / max(x.chars().count(), y.chars().count()) as f64
@@ -52,11 +52,14 @@ pub fn recognize_tag_in_tokens<T1: TokenProvider, T2: TagProvider>(
         return Some(mr.to_string());
     }
 
+    let threshold =
+        env::var("MAX_ACCEPTED_SCORE_SIMILARITY").map_or_else(|_| 0.25f64, |x| x.parse().unwrap());
+
     let ordinary_tags = tag_provider.ordinary_tags();
     let mut tags_to_scores = BTreeMap::new();
     for tag in &ordinary_tags {
         if let Some(OrderedFloat(score)) = get_max_score(tag, &tokens) {
-            if score <= 0.26f64 {
+            if score <= threshold {
                 tags_to_scores
                     .entry(OrderedFloat::from(score))
                     .or_insert(Vec::new())
@@ -70,7 +73,7 @@ pub fn recognize_tag_in_tokens<T1: TokenProvider, T2: TagProvider>(
             let (score, tags) = kv.to_owned();
 
             let tag = &tags[rand::thread_rng().gen::<usize>() % tags.len()];
-            log::debug!("Found a similarity: {{ tag '{}', score {}}}", tag, score);
+            log::debug!("Found a similarity: {{ tag '{}', score {} }}", tag, score);
             Some(tag.to_string())
         }
         None => None,

@@ -98,6 +98,12 @@ fn get_random_media_info_for_tag<T: Repository>(
     None
 }
 
+fn should_media_sending_trigger() -> bool {
+    let threshold =
+        env::var("MEDIA_SEND_CHANCE_IN_PERCENT").map_or_else(|_| 50, |x| x.parse().unwrap());
+    rand::thread_rng().gen_range(0..100) >= threshold
+}
+
 async fn answer(
     message: Message,
     bot: AutoSend<Bot>,
@@ -126,23 +132,27 @@ async fn answer(
     if let Some(tag) = recognize_tag_in_tokens(&token_provider, &tag_provider) {
         if let Some(media) = get_random_media_info_for_tag(&tag, &mut repository) {
             let data = repository
-            .media_data_by_name(&media.name)
-            .expect("Data was not found for voice media");
-            match media.type_ {
-                MediaType::Voice => {
-                    bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
-                        .reply_to_message_id(message_id)
-                        .await?;
-                }
-                MediaType::Picture => {
-                    log::warn!("Unsupported media type");
-                }
-                MediaType::Video => {
-                    bot.send_video(chat_id, InputFile::memory(Bytes::from(data)))
-                        .reply_to_message_id(message_id)
-                        .await?;
+                .media_data_by_name(&media.name)
+                .expect("Data was not found for voice media");
+            if should_media_sending_trigger() {
+                match media.type_ {
+                    MediaType::Voice => {
+                        bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
+                            .reply_to_message_id(message_id)
+                            .await?;
+                    }
+                    MediaType::Picture => {
+                        log::warn!("Unsupported media type");
+                    }
+                    MediaType::Video => {
+                        bot.send_video(chat_id, InputFile::memory(Bytes::from(data)))
+                            .reply_to_message_id(message_id)
+                            .await?;
+                    }
                 }
             }
+        } else {
+            log::debug!("Match was found, but omitted due to low chance");
         }
     }
 
