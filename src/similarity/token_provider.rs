@@ -42,9 +42,6 @@ impl TokenProvider for MessageTokenProvider {
 
         let text = urls.iter().fold(text, |t, u| t.replace(u, ""));
 
-        text.split(is_special)
-            .map(str::to_lowercase)
-            .filter(|s| !s.is_empty())
-            .collect()
+        text.split(is_special).filter(|s| !s.is_empty()).collect()
     }
 }

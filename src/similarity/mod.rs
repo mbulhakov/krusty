@@ -28,7 +28,12 @@ fn get_max_score(tag: &str, words: &[String]) -> Option<OrderedFloat<f64>> {
 fn extract_matched_regexps<'a>(words: &[String], patterns: &'a [String]) -> Vec<&'a str> {
     patterns
         .iter()
-        .filter(|r| words.iter().any(|w| Regex::new(r).unwrap().is_match(w)))
+        .filter(|r| {
+            words.iter().any(|w| {
+                Regex::new(r).unwrap().is_match(w)
+                    || Regex::new(r).unwrap().is_match(&w.to_lowercase())
+            })
+        })
         .map(String::as_str)
         .collect()
 }
