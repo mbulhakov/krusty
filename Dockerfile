@@ -41,7 +41,7 @@ RUN cargo build --release
 ####################################################################################################
 ## Final image
 ####################################################################################################
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 RUN apt update && apt-get -y install build-essential && apt install -y libpq-dev
 RUN apt-get install -y libssl-dev
