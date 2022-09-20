@@ -101,7 +101,7 @@ fn get_random_media_info_for_tag<T: Repository>(
 fn should_media_sending_trigger() -> bool {
     let threshold =
         env::var("MEDIA_SEND_CHANCE_IN_PERCENT").map_or_else(|_| 50, |x| x.parse().unwrap());
-    rand::thread_rng().gen_range(0..100) >= threshold
+    rand::thread_rng().gen_range(0..100) >= (100 - threshold)
 }
 
 async fn answer(
