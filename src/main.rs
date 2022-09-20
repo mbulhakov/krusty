@@ -150,9 +150,9 @@ async fn answer(
                             .await?;
                     }
                 }
+            } else {
+                log::debug!("Match was found, but omitted due to low chance");
             }
-        } else {
-            log::debug!("Match was found, but omitted due to low chance");
         }
     }
 
