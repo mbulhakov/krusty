@@ -1,8 +1,3 @@
-pub mod tag_provider;
-pub mod token_provider;
-
-use self::tag_provider::TagProvider;
-use self::token_provider::TokenProvider;
 use levenshtein::levenshtein;
 use ordered_float::OrderedFloat;
 use rand::Rng;
@@ -10,6 +5,9 @@ use regex::Regex;
 use std::cmp::max;
 use std::collections::BTreeMap;
 use std::env;
+
+use crate::tag_provider::TagProvider;
+use crate::token_provider::TokenProvider;
 
 fn score(x: &str, y: &str) -> f64 {
     levenshtein(x, y) as f64 / max(x.chars().count(), y.chars().count()) as f64

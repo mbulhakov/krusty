@@ -5,10 +5,6 @@ use diesel::Connection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
-use krusty::database::repository::{PostgresRepository, Repository};
-use krusty::database::types::{MediaInfo, MediaType};
-use krusty::similarity::tag_provider::RepositoryTagProvider;
-use krusty::similarity::{recognize_tag_in_tokens, token_provider};
 use rand::Rng;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -17,6 +13,12 @@ use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::{convert::Infallible, net::SocketAddr};
 use teloxide::{prelude::*, types::InputFile};
+
+use krusty::database::repository::{PostgresRepository, Repository};
+use krusty::database::types::{MediaInfo, MediaType};
+use krusty::similarity::recognize_tag_in_tokens;
+use krusty::tag_provider::RepositoryTagProvider;
+use krusty::token_provider::MessageTokenProvider;
 
 struct Ctx {
     chat_media_time: Mutex<HashMap<ChatId, DateTime<Utc>>>,
@@ -128,7 +130,7 @@ async fn answer(
 
     let chat_id = message.chat.id;
     let message_id = message.id;
-    let token_provider = token_provider::MessageTokenProvider::new(message);
+    let token_provider = MessageTokenProvider::new(message);
     if let Some(tag) = recognize_tag_in_tokens(&token_provider, &tag_provider) {
         if let Some(media) = get_random_media_info_for_tag(&tag, &mut repository) {
             let data = repository
@@ -142,7 +144,9 @@ async fn answer(
                             .await?;
                     }
                     MediaType::Picture => {
-                        log::warn!("Unsupported media type");
+                        bot.send_photo(chat_id, InputFile::memory(Bytes::from(data)))
+                            .reply_to_message_id(message_id)
+                            .await?;
                     }
                     MediaType::Video => {
                         bot.send_video(chat_id, InputFile::memory(Bytes::from(data)))
