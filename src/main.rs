@@ -9,7 +9,6 @@ use rand::Rng;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::env;
-use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::{convert::Infallible, net::SocketAddr};
 use teloxide::{prelude::*, types::InputFile};
@@ -83,6 +82,7 @@ async fn main() {
             .endpoint(send_media_on_text_trigger),
         );
 
+    // should be removed once the normal non-http workers will be allowed on fly.io
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     let make_service = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(handle)) });
     let _ = Server::bind(&addr).serve(make_service);
@@ -128,10 +128,8 @@ async fn send_media<T: Repository>(
     chat_id: ChatId,
     message_id: i32,
     caption: Option<String>,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let data = repository
-        .media_data_by_name(&media.name)
-        .expect("Data was not found for voice media");
+) -> anyhow::Result<()> {
+    let data = repository.media_data_by_name(&media.name)?;
     match media.type_ {
         MediaType::Voice => {
             bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
@@ -166,7 +164,7 @@ async fn send_media_on_text_trigger(
     message: Message,
     bot: AutoSend<Bot>,
     ctx: Arc<Ctx>,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+) -> anyhow::Result<()> {
     {
         log::debug!("Locking text trigger chat mutex");
         let mut chat_times = ctx.text_trigger_timestamps.lock().unwrap();
@@ -179,7 +177,7 @@ async fn send_media_on_text_trigger(
     }
 
     let mut repository = PostgresRepository::new(connection());
-    let tag_provider = RepositoryTagProvider::new(&mut repository);
+    let tag_provider = RepositoryTagProvider::new(&mut repository)?;
 
     let chat_id = message.chat.id;
     let message_id = message.id;
@@ -201,7 +199,7 @@ async fn send_media_if_forwarded_before(
     message: Message,
     bot: AutoSend<Bot>,
     ctx: Arc<Ctx>,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+) -> anyhow::Result<()> {
     let chat_id = message.chat.id;
     let message_id = message.id;
     let message_url = message

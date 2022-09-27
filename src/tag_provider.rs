@@ -11,21 +11,19 @@ pub struct RepositoryTagProvider {
 }
 
 impl RepositoryTagProvider {
-    pub fn new<T: Repository>(repository: &mut T) -> RepositoryTagProvider {
-        RepositoryTagProvider {
+    pub fn new<T: Repository>(repository: &mut T) -> anyhow::Result<RepositoryTagProvider> {
+        Ok(RepositoryTagProvider {
             ordinary_tags: repository
-                .tags_by_type(TagType::Ordinary)
-                .expect("Unable to obtain ordinary tags")
+                .tags_by_type(TagType::Ordinary)?
                 .iter()
                 .map(|x| x.text.to_owned())
                 .collect(),
             regexp_tags: repository
-                .tags_by_type(TagType::Regexp)
-                .expect("Unable to obtain regexp tags")
+                .tags_by_type(TagType::Regexp)?
                 .iter()
                 .map(|x| x.text.to_owned())
                 .collect(),
-        }
+        })
     }
 }
 
