@@ -1,5 +1,8 @@
+use mockall::automock;
+
 use crate::database::{repository::Repository, types::*};
 
+#[automock]
 pub trait TagProvider {
     fn ordinary_tags(&self) -> Vec<String>;
     fn regexp_tags(&self) -> Vec<String>;

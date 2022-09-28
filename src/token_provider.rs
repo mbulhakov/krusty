@@ -1,3 +1,4 @@
+use mockall::automock;
 use teloxide::prelude::*;
 use teloxide::types::MessageEntityKind;
 
@@ -5,6 +6,7 @@ fn is_special(ch: char) -> bool {
     (' '..='/').contains(&ch) || (':'..='@').contains(&ch) || ('\\'..='`').contains(&ch)
 }
 
+#[automock]
 pub trait TokenProvider {
     fn provide(&self) -> Vec<String>;
 }
