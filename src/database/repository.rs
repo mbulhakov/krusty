@@ -22,7 +22,8 @@ pub trait Repository {
     fn forwarded_message_by_ids(
         &mut self,
         chat_id: i64,
-        message_id: i32,
+        forwarded_chat_id: i64,
+        forwarded_message_id: i32,
     ) -> Result<Option<types::ForwardedMessage>, diesel::result::Error>;
 
     fn insert_forward_message(
@@ -82,15 +83,18 @@ impl Repository for PostgresRepository {
     fn forwarded_message_by_ids(
         &mut self,
         c_id: i64,
+        f_c_id: i64,
         m_id: i32,
     ) -> Result<Option<types::ForwardedMessage>, diesel::result::Error> {
         Ok(forwarded_messages
             .filter(chat_id.eq(c_id))
             .filter(forwarded_message_id.eq(m_id))
+            .filter(forwarded_chat_id.eq(f_c_id))
             .select((
                 forwarded_messages::chat_id,
                 forwarded_messages::forwarded_message_id,
                 forwarded_messages::message_url,
+                forwarded_messages::forwarded_chat_id,
             ))
             .load::<types::ForwardedMessage>(&mut self.connection)?
             .first()

@@ -43,4 +43,5 @@ pub struct ForwardedMessage {
     pub chat_id: i64,
     pub forwarded_message_id: i32,
     pub message_url: String,
+    pub forwarded_chat_id: i64,
 }

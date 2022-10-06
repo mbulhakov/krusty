@@ -20,6 +20,7 @@ diesel::table! {
         chat_id -> Int8,
         forwarded_message_id -> Int4,
         message_url -> Varchar,
+        forwarded_chat_id -> Int8,
     }
 }
 

@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use bytes::Bytes;
 use chrono::{prelude::*, Duration};
 use diesel::pg::PgConnection;
@@ -72,8 +73,10 @@ async fn main() {
     let handler = Update::filter_message()
         .filter(|msg: Message, _: Arc<Ctx>| msg.chat.is_supergroup())
         .branch(
-            dptree::filter(|msg: Message, _: Arc<Ctx>| msg.forward_from_message_id().is_some())
-                .endpoint(send_media_if_forwarded_before),
+            dptree::filter(|msg: Message, _: Arc<Ctx>| {
+                msg.forward_from_message_id().is_some() && msg.forward_from_chat().is_some()
+            })
+            .endpoint(send_media_if_forwarded_before),
         )
         .branch(
             dptree::filter(move |msg: Message, _: Arc<Ctx>| {
@@ -205,12 +208,19 @@ async fn send_media_if_forwarded_before(
     let message_url = message
         .url()
         .expect("Message link should be obtained if the bot is used in supergroup");
+
     let forwarded_message_id = message
         .forward_from_message_id()
-        .expect("Non-forwarded message is handled in 'forward-only' handler");
+        .ok_or_else(|| anyhow!("Non-forwarded message is handled in 'forward-only' handler"))?;
+    let forwarded_chat_id = message
+        .forward_from_chat()
+        .ok_or_else(|| anyhow!("Non-forwarded message is handled in 'forward-only' handler"))?
+        .id
+        .0;
 
     let mut repository = PostgresRepository::new(connection());
-    let forwarded_message = repository.forwarded_message_by_ids(chat_id.0, forwarded_message_id)?;
+    let forwarded_message =
+        repository.forwarded_message_by_ids(chat_id.0, forwarded_chat_id, forwarded_message_id)?;
 
     if let Some(forwarded_message) = forwarded_message {
         if let Some(media) = get_random_media_info_for_feature_type(
@@ -243,6 +253,7 @@ async fn send_media_if_forwarded_before(
             chat_id: chat_id.0,
             forwarded_message_id,
             message_url: message_url.to_string(),
+            forwarded_chat_id,
         })?;
     }
 
