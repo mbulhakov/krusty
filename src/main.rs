@@ -137,18 +137,21 @@ async fn send_media<T: Repository>(
         MediaType::Voice => {
             bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
                 .caption(caption.unwrap_or_else(|| "".to_string()))
+                .disable_notification(true)
                 .reply_to_message_id(message_id)
                 .await?;
         }
         MediaType::Picture => {
             bot.send_photo(chat_id, InputFile::memory(Bytes::from(data)))
                 .caption(caption.unwrap_or_else(|| "".to_string()))
+                .disable_notification(true)
                 .reply_to_message_id(message_id)
                 .await?;
         }
         MediaType::Video => {
             bot.send_video(chat_id, InputFile::memory(Bytes::from(data)))
                 .caption(caption.unwrap_or_else(|| "".to_string()))
+                .disable_notification(true)
                 .reply_to_message_id(message_id)
                 .await?;
         }
