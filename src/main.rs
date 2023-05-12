@@ -7,6 +7,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use rand::Rng;
+use teloxide::types::MessageId;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::env;
@@ -51,7 +52,7 @@ fn run_migrations() {
 async fn main() {
     pretty_env_logger::init();
     log::info!("Starting bot...");
-    let bot = Bot::from_env().auto_send();
+    let bot = Bot::from_env();
 
     let media_timeout_sec =
         env::var("MEDIA_TIMEOUT_SEC").map_or_else(|_| 30, |x| x.parse().unwrap());
@@ -88,7 +89,7 @@ async fn main() {
     // should be removed once the normal non-http workers will be allowed on fly.io
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     let make_service = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(handle)) });
-    let _ = Server::bind(&addr).serve(make_service);
+    let dummy_server = Server::bind(&addr).serve(make_service);
 
     Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![ctx])
@@ -96,6 +97,8 @@ async fn main() {
         .build()
         .dispatch()
         .await;
+
+    std::mem::drop(dummy_server);
 }
 
 fn get_random_media_info_for_tag<T: Repository>(
@@ -127,30 +130,30 @@ fn get_random_media_info_for_feature_type<T: Repository>(
 async fn send_media<T: Repository>(
     media: &MediaInfo,
     repository: &mut T,
-    bot: AutoSend<Bot>,
+    bot: Bot,
     chat_id: ChatId,
-    message_id: i32,
+    message_id: MessageId,
     caption: Option<String>,
 ) -> anyhow::Result<()> {
     let data = repository.media_data_by_name(&media.name)?;
     match media.type_ {
         MediaType::Voice => {
             bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
-                .caption(caption.unwrap_or_else(|| "".to_string()))
+                .caption(caption.unwrap_or_default())
                 .disable_notification(true)
                 .reply_to_message_id(message_id)
                 .await?;
         }
         MediaType::Picture => {
             bot.send_photo(chat_id, InputFile::memory(Bytes::from(data)))
-                .caption(caption.unwrap_or_else(|| "".to_string()))
+                .caption(caption.unwrap_or_default())
                 .disable_notification(true)
                 .reply_to_message_id(message_id)
                 .await?;
         }
         MediaType::Video => {
             bot.send_video(chat_id, InputFile::memory(Bytes::from(data)))
-                .caption(caption.unwrap_or_else(|| "".to_string()))
+                .caption(caption.unwrap_or_default())
                 .disable_notification(true)
                 .reply_to_message_id(message_id)
                 .await?;
@@ -168,7 +171,7 @@ fn should_media_sending_trigger() -> bool {
 
 async fn send_media_on_text_trigger(
     message: Message,
-    bot: AutoSend<Bot>,
+    bot: Bot,
     ctx: Arc<Ctx>,
 ) -> anyhow::Result<()> {
     {
@@ -203,7 +206,7 @@ async fn send_media_on_text_trigger(
 
 async fn send_media_if_forwarded_before(
     message: Message,
-    bot: AutoSend<Bot>,
+    bot: Bot,
     ctx: Arc<Ctx>,
 ) -> anyhow::Result<()> {
     let chat_id = message.chat.id;

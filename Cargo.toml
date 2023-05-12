@@ -20,7 +20,7 @@ ordered-float = "3.0"
 pretty_env_logger = "0.4"
 rand = "0.8.5"
 regex = "1"
-teloxide = { version = "0.10", features = ["macros", "auto-send"] }
+teloxide = { version = "0.12.2", features = ["macros", "auto-send"] }
 tokio = { version =  "1.8", features = ["rt-multi-thread", "macros"] }
 
 [target.'cfg(unix)'.dependencies]
