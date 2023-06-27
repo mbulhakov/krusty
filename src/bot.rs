@@ -6,6 +6,7 @@ use diesel::{Connection, PgConnection};
 use rand::Rng;
 use tokio::sync::Mutex;
 
+use percentage::PercentageInteger;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::env;
@@ -23,8 +24,9 @@ pub async fn start_bot(
     bot: teloxide::Bot,
     media_timeout: Duration,
     ignore_message_older_than: Duration,
+    media_being_sent_chance: PercentageInteger,
 ) {
-    let ctx = Arc::new(Ctx::new(media_timeout));
+    let ctx = Arc::new(Ctx::new(media_timeout, media_being_sent_chance));
 
     let handler = Update::filter_message()
         .filter(|msg: Message, _: Arc<Ctx>| msg.chat.is_supergroup())
@@ -53,14 +55,16 @@ struct Ctx {
     text_trigger_timestamps: Mutex<HashMap<ChatId, DateTime<Utc>>>,
     duplicate_forward_timestamps: Mutex<HashMap<ChatId, DateTime<Utc>>>,
     media_timeout: Duration,
+    media_being_sent_chance: PercentageInteger,
 }
 
 impl Ctx {
-    pub fn new(media_timeout: Duration) -> Ctx {
+    pub fn new(media_timeout: Duration, media_being_sent_chance: PercentageInteger) -> Ctx {
         Ctx {
             text_trigger_timestamps: Mutex::new(HashMap::new()),
             duplicate_forward_timestamps: Mutex::new(HashMap::new()),
             media_timeout,
+            media_being_sent_chance,
         }
     }
 }
@@ -89,7 +93,7 @@ async fn send_media_on_text_trigger(
     let token_provider = MessageTokenProvider::new(message);
     if let Some(tag) = recognize_tag_in_tokens(&token_provider, &tag_provider) {
         if let Some(media) = get_random_media_info_for_tag(&tag, &mut repository) {
-            if should_media_sending_trigger() {
+            if should_media_be_sent(&ctx.media_being_sent_chance) {
                 send_media(&media, &mut repository, bot, chat_id, message_id, None).await?
             } else {
                 log::debug!("Match was found, but omitted due to low chance");
@@ -234,8 +238,6 @@ fn connection() -> PgConnection {
     PgConnection::establish(&uri).expect("Failed to obtain connection")
 }
 
-fn should_media_sending_trigger() -> bool {
-    let threshold =
-        env::var("MEDIA_SEND_CHANCE_IN_PERCENT").map_or_else(|_| 50, |x| x.parse().unwrap());
-    rand::thread_rng().gen_range(0..100) >= (100 - threshold)
+fn should_media_be_sent(media_being_sent_chance: &PercentageInteger) -> bool {
+    rand::thread_rng().gen_range(0..100) >= (100 - (*media_being_sent_chance).value())
 }
