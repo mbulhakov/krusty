@@ -5,6 +5,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 
+use percentage::Percentage;
 use std::env;
 use std::{convert::Infallible, net::SocketAddr};
 use teloxide::prelude::*;
@@ -43,6 +44,9 @@ async fn main() {
         panic!("Media timeout is greater than 'ignore message older than': {media_timeout_sec} > {ignore_message_older_than_sec}");
     }
 
+    let media_being_sent_chance_in_percent =
+        env::var("MEDIA_SEND_CHANCE_IN_PERCENT").map_or_else(|_| 50, |x| x.parse().unwrap());
+
     run_migrations();
 
     // should be removed once the normal non-http workers will be allowed on fly.io
@@ -54,6 +58,7 @@ async fn main() {
         bot,
         Duration::seconds(media_timeout_sec),
         Duration::seconds(ignore_message_older_than_sec),
+        Percentage::from(media_being_sent_chance_in_percent),
     )
     .await;
 
