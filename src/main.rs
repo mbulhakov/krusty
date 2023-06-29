@@ -1,14 +1,16 @@
+use bb8::Pool;
 use chrono::Duration;
 use diesel::pg::PgConnection;
 use diesel::Connection;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request, Response, Server};
-
 use percentage::Percentage;
 use std::env;
 use std::{convert::Infallible, net::SocketAddr};
 use teloxide::prelude::*;
+
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Request, Response, Server};
 
 use krusty::bot::start_bot;
 
@@ -16,17 +18,13 @@ async fn dummy(_: Request<Body>) -> Result<Response<Body>, Infallible> {
     Ok(Response::new(Body::from("")))
 }
 
-fn connection() -> PgConnection {
-    let uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-    log::debug!("PG uri: {}", uri);
-    PgConnection::establish(&uri).expect("Failed to obtain connection")
-}
-
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
-fn run_migrations() {
-    let mut connection = connection();
-    connection.run_pending_migrations(MIGRATIONS).unwrap();
+fn run_migrations(db_uri: &str) {
+    PgConnection::establish(db_uri)
+        .expect("Failed to obtain connection")
+        .run_pending_migrations(MIGRATIONS)
+        .unwrap();
 }
 
 #[tokio::main]
@@ -47,7 +45,12 @@ async fn main() {
     let media_being_sent_chance_in_percent =
         env::var("MEDIA_SEND_CHANCE_IN_PERCENT").map_or_else(|_| 50, |x| x.parse().unwrap());
 
-    run_migrations();
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
+
+    run_migrations(&db_url);
+
+    let mng = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(db_url);
+    let pool = Pool::builder().build(mng).await.unwrap();
 
     // should be removed once the normal non-http workers will be allowed on fly.io
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
@@ -59,6 +62,7 @@ async fn main() {
         Duration::seconds(media_timeout_sec),
         Duration::seconds(ignore_message_older_than_sec),
         Percentage::from(media_being_sent_chance_in_percent),
+        pool,
     )
     .await;
 
