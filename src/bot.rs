@@ -1,20 +1,20 @@
 use anyhow::anyhow;
+use bb8::Pool;
 use bytes::Bytes;
 use chrono::{prelude::*, Duration};
 
-use diesel::{Connection, PgConnection};
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use rand::Rng;
 use tokio::sync::Mutex;
 
 use percentage::PercentageInteger;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::env;
 use std::sync::Arc;
 use teloxide::types::MessageId;
 use teloxide::{prelude::*, types::InputFile, Bot};
 
-use crate::database::repository::{PostgresRepository, Repository};
+use crate::database::repository::Repository;
 use crate::database::types::{self, MediaFeatureType, MediaInfo, MediaType};
 use crate::similarity::recognize_tag_in_tokens;
 use crate::tag_provider::RepositoryTagProvider;
@@ -25,8 +25,9 @@ pub async fn start_bot(
     media_timeout: Duration,
     ignore_message_older_than: Duration,
     media_being_sent_chance: PercentageInteger,
+    pool: Pool<AsyncDieselConnectionManager<diesel_async::AsyncPgConnection>>,
 ) {
-    let ctx = Arc::new(Ctx::new(media_timeout, media_being_sent_chance));
+    let ctx = Arc::new(Ctx::new(media_timeout, media_being_sent_chance, pool));
 
     let handler = Update::filter_message()
         .filter(|msg: Message, _: Arc<Ctx>| msg.chat.is_supergroup())
@@ -56,15 +57,21 @@ struct Ctx {
     duplicate_forward_timestamps: Mutex<HashMap<ChatId, DateTime<Utc>>>,
     media_timeout: Duration,
     media_being_sent_chance: PercentageInteger,
+    pool: Pool<AsyncDieselConnectionManager<diesel_async::AsyncPgConnection>>,
 }
 
 impl Ctx {
-    pub fn new(media_timeout: Duration, media_being_sent_chance: PercentageInteger) -> Ctx {
+    pub fn new(
+        media_timeout: Duration,
+        media_being_sent_chance: PercentageInteger,
+        pool: Pool<AsyncDieselConnectionManager<diesel_async::AsyncPgConnection>>,
+    ) -> Ctx {
         Ctx {
             text_trigger_timestamps: Mutex::new(HashMap::new()),
             duplicate_forward_timestamps: Mutex::new(HashMap::new()),
             media_timeout,
             media_being_sent_chance,
+            pool,
         }
     }
 }
@@ -85,16 +92,18 @@ async fn send_media_on_text_trigger(
         chat_times.insert(message.chat.id, Utc::now());
     }
 
-    let mut repository = PostgresRepository::new(connection());
-    let tag_provider = RepositoryTagProvider::new(&mut repository)?;
+    let mut repository = Repository::new(ctx.pool.clone());
+    let tag_provider = RepositoryTagProvider::new(&mut repository).await.unwrap();
 
     let chat_id = message.chat.id;
     let message_id = message.id;
     let token_provider = MessageTokenProvider::new(message);
     if let Some(tag) = recognize_tag_in_tokens(&token_provider, &tag_provider) {
-        if let Some(media) = get_random_media_info_for_tag(&tag, &mut repository) {
+        if let Some(media) = get_random_media_info_for_tag(&tag, &mut repository).await {
             if should_media_be_sent(&ctx.media_being_sent_chance) {
-                send_media(&media, &mut repository, bot, chat_id, message_id, None).await?
+                send_media(&media, &mut repository, bot, chat_id, message_id, None)
+                    .await
+                    .unwrap()
             } else {
                 log::debug!("Match was found, but omitted due to low chance");
             }
@@ -124,15 +133,18 @@ async fn send_media_if_forwarded_before(
         .id
         .0;
 
-    let mut repository = PostgresRepository::new(connection());
-    let forwarded_message =
-        repository.forwarded_message_by_ids(chat_id.0, forwarded_chat_id, forwarded_message_id)?;
+    let mut repository = Repository::new(ctx.pool.clone());
+    let forwarded_message = repository
+        .forwarded_message_by_ids(chat_id.0, forwarded_chat_id, forwarded_message_id)
+        .await?;
 
     if let Some(forwarded_message) = forwarded_message {
         if let Some(media) = get_random_media_info_for_feature_type(
             MediaFeatureType::DuplicatedForwardedMessageDetection,
             &mut repository,
-        ) {
+        )
+        .await
+        {
             {
                 log::debug!("Locking duplicate forward chat mutex");
                 let mut chat_times = ctx.duplicate_forward_timestamps.lock().await;
@@ -155,26 +167,28 @@ async fn send_media_if_forwarded_before(
             .await?
         }
     } else {
-        repository.insert_forward_message(&types::ForwardedMessage {
-            chat_id: chat_id.0,
-            forwarded_message_id,
-            message_url: message_url.to_string(),
-            forwarded_chat_id,
-        })?;
+        repository
+            .insert_forward_message(&types::ForwardedMessage {
+                chat_id: chat_id.0,
+                forwarded_message_id,
+                message_url: message_url.to_string(),
+                forwarded_chat_id,
+            })
+            .await?;
     }
 
     Ok(())
 }
 
-async fn send_media<T: Repository>(
+async fn send_media(
     media: &MediaInfo,
-    repository: &mut T,
+    repository: &mut Repository,
     bot: Bot,
     chat_id: ChatId,
     message_id: MessageId,
     caption: Option<String>,
 ) -> anyhow::Result<()> {
-    let data = repository.media_data_by_name(&media.name)?;
+    let data = repository.media_data_by_name(&media.name).await?;
     match media.type_ {
         MediaType::Voice => {
             bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
@@ -202,11 +216,11 @@ async fn send_media<T: Repository>(
     Ok(())
 }
 
-fn get_random_media_info_for_tag<T: Repository>(
+async fn get_random_media_info_for_tag(
     tag: &str,
-    repository: &mut T,
+    repository: &mut Repository,
 ) -> Option<MediaInfo> {
-    let media_infos = repository.media_info_by_tag_text(tag).unwrap();
+    let media_infos = repository.media_info_by_tag_text(tag).await.unwrap();
 
     if !media_infos.is_empty() {
         return Some(media_infos[rand::thread_rng().gen::<usize>() % media_infos.len()].to_owned());
@@ -215,11 +229,11 @@ fn get_random_media_info_for_tag<T: Repository>(
     None
 }
 
-fn get_random_media_info_for_feature_type<T: Repository>(
+async fn get_random_media_info_for_feature_type(
     type_: types::MediaFeatureType,
-    repository: &mut T,
+    repository: &mut Repository,
 ) -> Option<MediaInfo> {
-    let media_infos = repository.media_info_by_feature_type(type_).unwrap();
+    let media_infos = repository.media_info_by_feature_type(type_).await.unwrap();
 
     if !media_infos.is_empty() {
         return Some(media_infos[rand::thread_rng().gen::<usize>() % media_infos.len()].to_owned());
@@ -230,12 +244,6 @@ fn get_random_media_info_for_feature_type<T: Repository>(
 
 fn is_time_passed(datetime: &DateTime<Utc>, duration: &Duration) -> bool {
     Utc::now().signed_duration_since(*datetime).cmp(duration) == Ordering::Greater
-}
-
-fn connection() -> PgConnection {
-    let uri = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
-    log::debug!("PG uri: {}", uri);
-    PgConnection::establish(&uri).expect("Failed to obtain connection")
 }
 
 fn should_media_be_sent(media_being_sent_chance: &PercentageInteger) -> bool {

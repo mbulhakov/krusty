@@ -7,9 +7,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.65"
+bb8 = "0.8.1"
 bytes = "1.2.1"
 chrono = "0.4.0"
 diesel = { version = "2.0.0", features = ["postgres"] }
+diesel-async = { version = "0.3.1", features = ["bb8", "postgres"] }
 diesel-derive-enum = { version = "2.0.0-rc.0", features = ["postgres"] }
 diesel_migrations = "2.0.0"
 hyper = { version = "0.14.20", features = ["server"] }

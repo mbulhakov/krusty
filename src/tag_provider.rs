@@ -14,15 +14,19 @@ pub struct RepositoryTagProvider {
 }
 
 impl RepositoryTagProvider {
-    pub fn new<T: Repository>(repository: &mut T) -> anyhow::Result<RepositoryTagProvider> {
+    pub async fn new(
+        repository: &mut Repository,
+    ) -> anyhow::Result<RepositoryTagProvider> {
         Ok(RepositoryTagProvider {
             ordinary_tags: repository
-                .tags_by_type(TagType::Ordinary)?
+                .tags_by_type(TagType::Ordinary)
+                .await?
                 .iter()
                 .map(|x| x.text.to_owned())
                 .collect(),
             regexp_tags: repository
-                .tags_by_type(TagType::Regexp)?
+                .tags_by_type(TagType::Regexp)
+                .await?
                 .iter()
                 .map(|x| x.text.to_owned())
                 .collect(),
