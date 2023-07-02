@@ -1,7 +1,7 @@
 # krusty
 
 ### What
-TG bot with a grain of async programming. Does a few tricks:
+Yet another TG bot. Does a few tricks:
 - Checks hot words in the message => sends a media as a response (voice, video, picture) with a specific chance.
 - Checks forwarded posts from TG channels on duplication => sends a media as a response (voice, video, picture).
 
