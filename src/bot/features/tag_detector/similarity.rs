@@ -1,14 +1,54 @@
 use levenshtein::levenshtein;
 use mockall::predicate::*;
 use ordered_float::OrderedFloat;
+use percentage::PercentageDecimal;
 use rand::Rng;
 use regex::Regex;
 use std::cmp::max;
 use std::collections::BTreeMap;
-use std::env;
 
-use crate::tag_provider::TagProvider;
-use crate::token_provider::TokenProvider;
+use super::tag_provider::TagProvider;
+use super::token_provider::TokenProvider;
+
+pub fn recognize_tag_in_tokens<T1: TokenProvider, T2: TagProvider>(
+    token_provider: &T1,
+    tag_provider: &T2,
+    similarity_threshold: &PercentageDecimal,
+) -> Option<String> {
+    let tokens = token_provider.provide();
+    let regexp_tags = tag_provider.regexp_tags();
+
+    let matched_regexps = extract_matched_regexps(&tokens, &regexp_tags);
+    if !matched_regexps.is_empty() {
+        let mr = &matched_regexps[rand::thread_rng().gen::<usize>() % matched_regexps.len()];
+        log::debug!("Found matched regexp: '{}'", mr);
+        return Some(mr.to_string());
+    }
+
+    let ordinary_tags = tag_provider.ordinary_tags();
+    let mut tags_to_scores = BTreeMap::new();
+    for tag in &ordinary_tags {
+        if let Some(OrderedFloat(score)) = get_min_score(tag, &tokens) {
+            if score <= similarity_threshold.value() {
+                tags_to_scores
+                    .entry(OrderedFloat::from(score))
+                    .or_insert(Vec::new())
+                    .push(tag);
+            }
+        }
+    }
+
+    match tags_to_scores.iter().next() {
+        Some(kv) => {
+            let (score, tags) = kv.to_owned();
+
+            let tag = &tags[rand::thread_rng().gen::<usize>() % tags.len()];
+            log::debug!("Found a similarity: {{ tag '{}', score {} }}", tag, score);
+            Some(tag.to_string())
+        }
+        None => None,
+    }
+}
 
 fn score(x: &str, y: &str) -> f64 {
     levenshtein(x, y) as f64 / max(x.chars().count(), y.chars().count()) as f64
@@ -44,57 +84,19 @@ fn extract_matched_regexps<'a>(words: &[String], patterns: &'a [String]) -> Vec<
         .collect()
 }
 
-pub fn recognize_tag_in_tokens<T1: TokenProvider, T2: TagProvider>(
-    token_provider: &T1,
-    tag_provider: &T2,
-) -> Option<String> {
-    let tokens = token_provider.provide();
-    let regexp_tags = tag_provider.regexp_tags();
-
-    let matched_regexps = extract_matched_regexps(&tokens, &regexp_tags);
-    if !matched_regexps.is_empty() {
-        let mr = &matched_regexps[rand::thread_rng().gen::<usize>() % matched_regexps.len()];
-        log::debug!("Found matched regexp: '{}'", mr);
-        return Some(mr.to_string());
-    }
-
-    let threshold =
-        env::var("MAX_ACCEPTED_SCORE_SIMILARITY").map_or_else(|_| 0.25f64, |x| x.parse().unwrap());
-
-    let ordinary_tags = tag_provider.ordinary_tags();
-    let mut tags_to_scores = BTreeMap::new();
-    for tag in &ordinary_tags {
-        if let Some(OrderedFloat(score)) = get_min_score(tag, &tokens) {
-            if score <= threshold {
-                tags_to_scores
-                    .entry(OrderedFloat::from(score))
-                    .or_insert(Vec::new())
-                    .push(tag);
-            }
-        }
-    }
-
-    match tags_to_scores.iter().next() {
-        Some(kv) => {
-            let (score, tags) = kv.to_owned();
-
-            let tag = &tags[rand::thread_rng().gen::<usize>() % tags.len()];
-            log::debug!("Found a similarity: {{ tag '{}', score {} }}", tag, score);
-            Some(tag.to_string())
-        }
-        None => None,
-    }
-}
-
 //
 // TESTS
 //
 
 #[cfg(test)]
 mod tests {
-    use crate::{tag_provider::MockTagProvider, token_provider::MockTokenProvider};
+    use percentage::Percentage;
 
-    use super::*;
+    use crate::bot::features::tag_detector::{
+        similarity::{recognize_tag_in_tokens, score},
+        tag_provider::MockTagProvider,
+        token_provider::MockTokenProvider,
+    };
 
     #[test]
     fn test_unicode_scoring() {
@@ -120,7 +122,11 @@ mod tests {
                 .collect::<Vec<_>>()
         });
 
-        let actual = recognize_tag_in_tokens(&token_provider, &tag_provider);
+        let actual = recognize_tag_in_tokens(
+            &token_provider,
+            &tag_provider,
+            &Percentage::from_decimal(0.25f64),
+        );
         assert_eq!(actual, Some("^правильный$".to_string()));
     }
 
@@ -139,7 +145,11 @@ mod tests {
                 .collect::<Vec<_>>()
         });
 
-        let actual = recognize_tag_in_tokens(&token_provider, &tag_provider);
+        let actual = recognize_tag_in_tokens(
+            &token_provider,
+            &tag_provider,
+            &Percentage::from_decimal(0.25f64),
+        );
         assert_eq!(actual, Some("^right$".to_string()));
     }
 
@@ -158,7 +168,11 @@ mod tests {
                 .collect::<Vec<_>>()
         });
 
-        let actual = recognize_tag_in_tokens(&token_provider, &tag_provider);
+        let actual = recognize_tag_in_tokens(
+            &token_provider,
+            &tag_provider,
+            &Percentage::from_decimal(0.25f64),
+        );
         assert_eq!(actual, Some("^правильный$".to_string()));
     }
 
@@ -178,7 +192,11 @@ mod tests {
                 .collect::<Vec<_>>()
         });
 
-        let actual = recognize_tag_in_tokens(&token_provider, &tag_provider);
+        let actual = recognize_tag_in_tokens(
+            &token_provider,
+            &tag_provider,
+            &Percentage::from_decimal(0.25f64),
+        );
         assert_eq!(actual, Some("праильнй".to_string()));
     }
 
@@ -196,7 +214,11 @@ mod tests {
                 .collect::<Vec<_>>()
         });
 
-        let actual = recognize_tag_in_tokens(&token_provider, &tag_provider);
+        let actual = recognize_tag_in_tokens(
+            &token_provider,
+            &tag_provider,
+            &Percentage::from_decimal(0.25f64),
+        );
         assert_eq!(actual, None);
     }
 
@@ -219,7 +241,11 @@ mod tests {
                 .collect::<Vec<_>>()
         });
 
-        let actual = recognize_tag_in_tokens(&token_provider, &tag_provider);
+        let actual = recognize_tag_in_tokens(
+            &token_provider,
+            &tag_provider,
+            &Percentage::from_decimal(0.25f64),
+        );
         assert_eq!(actual, Some("^token$".to_string()));
     }
 }

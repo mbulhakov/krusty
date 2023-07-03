@@ -16,7 +16,7 @@ pub struct MessageTokenProvider {
 }
 
 impl MessageTokenProvider {
-    pub fn new(message: Message) -> MessageTokenProvider {
+    pub fn new(message: Message) -> Self {
         MessageTokenProvider { message }
     }
 }

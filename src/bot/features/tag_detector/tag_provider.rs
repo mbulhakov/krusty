@@ -14,9 +14,7 @@ pub struct RepositoryTagProvider {
 }
 
 impl RepositoryTagProvider {
-    pub async fn new(
-        repository: &mut Repository,
-    ) -> anyhow::Result<RepositoryTagProvider> {
+    pub async fn new(repository: &mut Repository) -> anyhow::Result<Self> {
         Ok(RepositoryTagProvider {
             ordinary_tags: repository
                 .tags_by_type(TagType::Ordinary)

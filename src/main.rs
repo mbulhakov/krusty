@@ -8,6 +8,7 @@ use percentage::Percentage;
 use std::env;
 use std::{convert::Infallible, net::SocketAddr};
 use teloxide::prelude::*;
+use tracing_unwrap::ResultExt;
 
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
@@ -24,7 +25,7 @@ fn run_migrations(db_uri: &str) {
     PgConnection::establish(db_uri)
         .expect("Failed to obtain connection")
         .run_pending_migrations(MIGRATIONS)
-        .unwrap();
+        .unwrap_or_log();
 }
 
 #[tokio::main]
@@ -45,12 +46,15 @@ async fn main() {
     let media_being_sent_chance_in_percent =
         env::var("MEDIA_SEND_CHANCE_IN_PERCENT").map_or_else(|_| 50, |x| x.parse().unwrap());
 
+    let similarity_threshold_in_decimal =
+        env::var("MAX_ACCEPTED_SCORE_SIMILARITY").map_or_else(|_| 0.26f64, |x| x.parse().unwrap());
+
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set");
 
     run_migrations(&db_url);
 
     let mng = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(db_url);
-    let pool = Pool::builder().build(mng).await.unwrap();
+    let pool = Pool::builder().build(mng).await.unwrap_or_log();
 
     // should be removed once the normal non-http workers will be allowed on fly.io
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
@@ -62,6 +66,7 @@ async fn main() {
         Duration::seconds(media_timeout_sec),
         Duration::seconds(ignore_message_older_than_sec),
         Percentage::from(media_being_sent_chance_in_percent),
+        Percentage::from_decimal(similarity_threshold_in_decimal),
         pool,
     )
     .await;
