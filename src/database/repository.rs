@@ -3,7 +3,7 @@ use crate::schema::forwarded_messages;
 use crate::schema::forwarded_messages::dsl::*;
 use crate::schema::media;
 use crate::schema::media::dsl::*;
-use bb8::Pool;
+use deadpool::managed::Pool;
 use diesel::{insert_into, prelude::*};
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, RunQueryDsl};
 
