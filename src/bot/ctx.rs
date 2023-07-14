@@ -1,5 +1,5 @@
-use bb8::Pool;
 use chrono::{prelude::*, Duration};
+use deadpool::managed::Pool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use percentage::{PercentageDecimal, PercentageInteger};
 use std::collections::HashMap;

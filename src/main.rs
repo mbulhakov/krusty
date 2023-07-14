@@ -1,5 +1,5 @@
-use bb8::Pool;
 use chrono::Duration;
+use deadpool::managed::Pool;
 use diesel::pg::PgConnection;
 use diesel::Connection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
@@ -54,7 +54,7 @@ async fn main() {
     run_migrations(&db_url);
 
     let mng = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(db_url);
-    let pool = Pool::builder().build(mng).await.unwrap_or_log();
+    let pool = Pool::builder(mng).build().unwrap_or_log();
 
     // should be removed once the normal non-http workers will be allowed on fly.io
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));

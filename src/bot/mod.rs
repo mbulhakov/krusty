@@ -2,8 +2,8 @@ mod ctx;
 mod features;
 mod utils;
 
-use bb8::Pool;
 use chrono::Duration;
+use deadpool::managed::Pool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use percentage::{PercentageDecimal, PercentageInteger};
 use std::sync::Arc;
