@@ -19,6 +19,7 @@ diesel::table! {
         id -> Int4,
         chat_id -> Int8,
         forwarded_message_id -> Int4,
+        #[max_length = 255]
         message_url -> Varchar,
         forwarded_chat_id -> Int8,
     }
@@ -30,6 +31,7 @@ diesel::table! {
 
     media (id) {
         id -> Int4,
+        #[max_length = 255]
         name -> Varchar,
         #[sql_name = "type"]
         type_ -> MediaType,
@@ -61,9 +63,11 @@ diesel::table! {
 
     tags (id) {
         id -> Int4,
+        #[max_length = 255]
         text -> Varchar,
         #[sql_name = "type"]
         type_ -> TagType,
+        for_whole_text -> Bool,
     }
 }
 

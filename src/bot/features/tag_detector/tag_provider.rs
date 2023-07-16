@@ -2,41 +2,40 @@ use mockall::automock;
 
 use crate::database::{repository::Repository, types::*};
 
+pub struct Tag {
+    pub text: String,
+    pub is_regexp: bool,
+    pub for_whole_text: bool,
+}
+
 #[automock]
 pub trait TagProvider {
-    fn ordinary_tags(&self) -> Vec<String>;
-    fn regexp_tags(&self) -> Vec<String>;
+    fn tags(&self) -> &[Tag];
 }
 
 pub struct RepositoryTagProvider {
-    ordinary_tags: Vec<String>,
-    regexp_tags: Vec<String>,
+    tags: Vec<Tag>,
 }
 
 impl RepositoryTagProvider {
     pub async fn new(repository: &mut Repository) -> anyhow::Result<Self> {
-        Ok(RepositoryTagProvider {
-            ordinary_tags: repository
-                .tags_by_type(TagType::Ordinary)
-                .await?
-                .iter()
-                .map(|x| x.text.to_owned())
-                .collect(),
-            regexp_tags: repository
-                .tags_by_type(TagType::Regexp)
-                .await?
-                .iter()
-                .map(|x| x.text.to_owned())
-                .collect(),
-        })
+        let tags = repository
+            .tags()
+            .await?
+            .into_iter()
+            .map(|t| Tag {
+                text: t.text,
+                is_regexp: t.type_ == TagType::Regexp,
+                for_whole_text: t.for_whole_text,
+            })
+            .collect();
+
+        Ok(RepositoryTagProvider { tags })
     }
 }
 
 impl TagProvider for RepositoryTagProvider {
-    fn ordinary_tags(&self) -> Vec<String> {
-        self.ordinary_tags.clone()
-    }
-    fn regexp_tags(&self) -> Vec<String> {
-        self.regexp_tags.clone()
+    fn tags(&self) -> &[Tag] {
+        &self.tags
     }
 }

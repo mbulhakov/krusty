@@ -16,15 +16,14 @@ impl Repository {
         Repository { pool }
     }
 
-    pub async fn tags_by_type(&mut self, t: types::TagType) -> anyhow::Result<Vec<types::Tag>> {
+    pub async fn tags(&mut self) -> anyhow::Result<Vec<types::Tag>> {
         use crate::schema::tags;
         use crate::schema::tags::dsl::*;
 
         let mut conn = self.pool.get().await?;
 
         Ok(tags
-            .filter(type_.eq(t))
-            .select((tags::text, tags::type_))
+            .select((tags::text, tags::type_, tags::for_whole_text))
             .load::<types::Tag>(&mut *conn)
             .await?)
     }
@@ -59,15 +58,15 @@ impl Repository {
     pub async fn forwarded_message_by_ids(
         &mut self,
         c_id: i64,
-        f_c_id: i64,
-        m_id: i32,
+        fwd_chat_id: i64,
+        msg_id: i32,
     ) -> anyhow::Result<Option<types::ForwardedMessage>> {
         let mut conn = self.pool.get().await?;
 
         let result = forwarded_messages
             .filter(chat_id.eq(c_id))
-            .filter(forwarded_message_id.eq(m_id))
-            .filter(forwarded_chat_id.eq(f_c_id))
+            .filter(forwarded_message_id.eq(msg_id))
+            .filter(forwarded_chat_id.eq(fwd_chat_id))
             .select((
                 forwarded_messages::chat_id,
                 forwarded_messages::forwarded_message_id,
