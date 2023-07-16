@@ -29,6 +29,7 @@ pub enum MediaFeatureType {
 pub struct Tag {
     pub text: String,
     pub type_: TagType,
+    pub for_whole_text: bool,
 }
 
 #[derive(Queryable, Clone)]
