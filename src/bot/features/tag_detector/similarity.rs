@@ -1,6 +1,7 @@
 use levenshtein::levenshtein;
 use mockall::predicate::*;
 use ordered_float::OrderedFloat;
+use ordslice::Ext;
 use percentage::PercentageDecimal;
 use rand::Rng;
 use regex::Regex;
@@ -25,7 +26,8 @@ pub fn recognize_tag_in_tokens(
     let mut tags = tag_provider.tags().iter().collect::<Vec<_>>();
     tags.sort_by(|a, b| a.is_regexp.cmp(&b.is_regexp));
 
-    let (regexp_tags, ordinary_tags) = tags.split_at(tags.partition_point(|x| x.is_regexp));
+    let (ordinary_tags, regexp_tags) =
+        tags.split_at(tags.lower_bound_by(|x| x.is_regexp.cmp(&true)));
 
     let matched_regexps = process_regexp_tags(regexp_tags, token_provider.source(), &tokens);
     if !matched_regexps.is_empty() {
@@ -329,9 +331,12 @@ mod tests {
 
     fn test_both_regexp_and_ordinary_tags_on_tokens_case() {
         let mut tag_provider = MockTagProvider::new();
-        tag_provider
-            .expect_tags()
-            .return_const(vec![regexp_token_tag("^token$"), token_tag("this")]);
+        tag_provider.expect_tags().return_const(vec![
+            regexp_token_tag("^token$"),
+            token_tag("this"),
+            regexp_token_tag("^wrong$"),
+            token_tag("is"),
+        ]);
 
         let mut token_provider = MockTokenProvider::new();
         let source = "this is the right token";
