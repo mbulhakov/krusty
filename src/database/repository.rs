@@ -1,11 +1,12 @@
+use deadpool::managed::Pool;
+use diesel::{insert_into, prelude::*};
+use diesel_async::{pooled_connection::AsyncDieselConnectionManager, RunQueryDsl};
+
 use crate::database::types;
 use crate::schema::forwarded_messages;
 use crate::schema::forwarded_messages::dsl::*;
 use crate::schema::media;
 use crate::schema::media::dsl::*;
-use deadpool::managed::Pool;
-use diesel::{insert_into, prelude::*};
-use diesel_async::{pooled_connection::AsyncDieselConnectionManager, RunQueryDsl};
 
 pub struct Repository {
     pool: Pool<AsyncDieselConnectionManager<diesel_async::AsyncPgConnection>>,

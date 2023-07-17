@@ -1,5 +1,6 @@
 use mockall::automock;
 
+use crate::bot::cache::tags;
 use crate::database::{repository::Repository, types::*};
 
 pub struct Tag {
@@ -19,8 +20,7 @@ pub struct RepositoryTagProvider {
 
 impl RepositoryTagProvider {
     pub async fn new(repository: &mut Repository) -> anyhow::Result<Self> {
-        let tags = repository
-            .tags()
+        let tags = tags(repository)
             .await?
             .into_iter()
             .map(|t| Tag {

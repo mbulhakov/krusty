@@ -8,6 +8,7 @@ use rand::Rng;
 use std::sync::Arc;
 use teloxide::{prelude::*, Bot};
 
+use crate::bot::cache::media_info_by_tag_text;
 use crate::bot::ctx::Ctx;
 use crate::bot::utils::{is_time_passed, send_media};
 use crate::database::repository::Repository;
@@ -58,7 +59,7 @@ async fn get_random_media_info_for_tag(
     tag: &str,
     repository: &mut Repository,
 ) -> Option<MediaInfo> {
-    let media_infos = match repository.media_info_by_tag_text(tag).await {
+    let media_infos = match media_info_by_tag_text(repository, tag).await {
         Ok(res) => Some(res),
         Err(e) => {
             log::error!("{e}");

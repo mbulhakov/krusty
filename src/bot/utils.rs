@@ -5,8 +5,11 @@ use std::cmp::Ordering;
 use teloxide::types::MessageId;
 use teloxide::{prelude::*, types::InputFile, Bot};
 
+use crate::bot::cache::media_info_by_feature_type;
 use crate::database::repository::Repository;
 use crate::database::types::{self, MediaInfo, MediaType};
+
+use super::cache::media_data_by_name;
 
 pub async fn send_media(
     media: &MediaInfo,
@@ -16,7 +19,7 @@ pub async fn send_media(
     message_id: MessageId,
     caption: Option<String>,
 ) -> anyhow::Result<()> {
-    let data = repository.media_data_by_name(&media.name).await?;
+    let data = media_data_by_name(repository, &media.name).await?;
     match media.type_ {
         MediaType::Voice => {
             bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
@@ -48,7 +51,7 @@ pub async fn get_random_media_info_for_feature_type(
     type_: types::MediaFeatureType,
     repository: &mut Repository,
 ) -> Option<MediaInfo> {
-    let media_infos = match repository.media_info_by_feature_type(type_).await {
+    let media_infos = match media_info_by_feature_type(repository, type_).await {
         Ok(result) => Some(result),
         Err(e) => {
             log::error!("{e}");

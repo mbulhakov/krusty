@@ -1,3 +1,4 @@
+mod cache;
 mod ctx;
 mod features;
 mod utils;
