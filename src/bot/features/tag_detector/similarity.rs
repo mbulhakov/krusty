@@ -1,12 +1,13 @@
+use fancy_regex::Regex;
 use levenshtein::levenshtein;
 use mockall::predicate::*;
 use ordered_float::OrderedFloat;
 use ordslice::Ext;
 use percentage::PercentageDecimal;
 use rand::Rng;
-use regex::Regex;
 use std::cmp::max;
 use std::collections::BTreeMap;
+use tracing_unwrap::ResultExt;
 
 use super::tag_provider::{Tag, TagProvider};
 use super::token_provider::TokenProvider;
@@ -128,9 +129,10 @@ fn extract_matched_regexps<'a>(tokens: &[&str], patterns: &[&'a str]) -> Vec<&'a
         .filter(|r| {
             let regexp = Regex::new(r);
             match regexp {
-                Ok(regexp) => tokens
-                    .iter()
-                    .any(|w| regexp.is_match(w) || regexp.is_match(&w.to_lowercase())),
+                Ok(regexp) => tokens.iter().any(|w| {
+                    regexp.is_match(w).unwrap_or_log()
+                        || regexp.is_match(&w.to_lowercase()).unwrap_or_log()
+                }),
                 Err(e) => {
                     log::warn!("Failed to compile regex '{}', skipping. Cause: {}", r, e);
                     false
@@ -359,12 +361,12 @@ mod tests {
     fn text_regexp_token_and_text_tag() {
         let mut tag_provider = MockTagProvider::new();
         tag_provider.expect_tags().return_const(vec![
-            regexp_token_tag("^token$"),
-            regexp_text_tag("^this is the right tok..$"),
+            regexp_token_tag(".*"),
+            regexp_text_tag(r#"^(?=(?:[^\p{Ll}]*[\p{Lu}]){2})[^\p{Ll}]+$"#), // match string if all letters, including utf-8 ones, are uppercase
         ]);
 
         let mut token_provider = MockTokenProvider::new();
-        let source = "this is the right token";
+        let source = r#"АХАХАWERTE@$%!#$ТПОНЇЪ !!!!!4565655БЯЯЬTER!!!@$%%$##$"#;
         token_provider
             .expect_source()
             .return_const(source.to_string());
@@ -377,7 +379,10 @@ mod tests {
             &tag_provider,
             &Percentage::from_decimal(0.25f64),
         );
-        assert_eq!(actual, Some("^this is the right tok..$".to_string()));
+        assert_eq!(
+            actual,
+            Some(r#"^(?=(?:[^\p{Ll}]*[\p{Lu}]){2})[^\p{Ll}]+$"#.to_string())
+        );
     }
 
     #[test]
