@@ -5,7 +5,6 @@ use teloxide::{prelude::*, Bot};
 
 use crate::{
     bot::{
-        cache::forwarded_message_by_ids,
         ctx::Ctx,
         utils::{get_random_media_info_for_feature_type, is_time_passed, send_media},
     },
@@ -36,13 +35,9 @@ pub async fn send_media_if_forwarded_before(
         .0;
 
     let mut repository = Repository::new(ctx.pool.clone());
-    let forwarded_message = forwarded_message_by_ids(
-        &mut repository,
-        chat_id.0,
-        forwarded_chat_id,
-        forwarded_message_id,
-    )
-    .await?;
+    let forwarded_message = repository
+        .forwarded_message_by_ids(chat_id.0, forwarded_chat_id, forwarded_message_id)
+        .await?;
 
     if let Some(forwarded_message) = forwarded_message {
         if let Some(media) = get_random_media_info_for_feature_type(

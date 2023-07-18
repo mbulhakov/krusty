@@ -37,21 +37,6 @@ pub async fn media_data_by_name(r: &mut Repository, n: &str) -> anyhow::Result<V
 }
 
 #[cached(
-    type = "SizedCache<String, Option<types::ForwardedMessage>>",
-    create = "{ SizedCache::with_size(200) }",
-    result = true,
-    convert = r#"{ format!("{c_id}_{fwd_chat_id}_{msg_id}") }"#
-)]
-pub async fn forwarded_message_by_ids(
-    r: &mut Repository,
-    c_id: i64,
-    fwd_chat_id: i64,
-    msg_id: i32,
-) -> anyhow::Result<Option<types::ForwardedMessage>> {
-    r.forwarded_message_by_ids(c_id, fwd_chat_id, msg_id).await
-}
-
-#[cached(
     type = "TimedCache<String, Vec<types::MediaInfo>>",
     create = "{ TimedCache::with_lifespan(3600) }",
     result = true,
