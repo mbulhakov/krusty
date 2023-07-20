@@ -8,7 +8,7 @@ Yet another TG bot. Does a few tricks:
 Works in supergroups.
 
 ### How to run
-Either build using cargo or use Docker. The native build is tested on Windows and MacOS.
+Either build using cargo or use Docker. The native build is tested on Windows and MacOS. The initial instance is running on https://fly.io/
 
 ### Configuration
 The bot can be configured only with environment variables.
@@ -25,4 +25,5 @@ The bot can be configured only with environment variables.
 Variables that have no default value are mandatory to be set.
 
 ### How to use
-TODO
+
+The bot is not intended for general use due to being heavily relied on data in Postgres, which should be ingested somehow. Some sort of panel might be added in the future to ease this burden.
