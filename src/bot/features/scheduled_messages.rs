@@ -53,6 +53,10 @@ pub async fn start_messages_scheduling(bot: teloxide::Bot, mut repository: Async
     if let Err(e) = sched.start().await {
         log::error!("Failed to start job scheduler: '{e}'");
     }
+
+    loop {
+        tokio::time::sleep(core::time::Duration::from_secs(1)).await;
+    }
 }
 
 async fn send_scheduled_message(
