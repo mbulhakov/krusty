@@ -143,8 +143,8 @@ fn extract_matched_regexps<'a>(tokens: &[&str], patterns: &[&'a str]) -> Vec<&'a
         .collect()
 }
 
-fn get_min_score(tag: &str, words: &[&str]) -> Option<OrderedFloat<f64>> {
-    words
+fn get_min_score(tag: &str, tokens: &[&str]) -> Option<OrderedFloat<f64>> {
+    tokens
         .iter()
         .map(|x| score(x, tag))
         .map(OrderedFloat::from)

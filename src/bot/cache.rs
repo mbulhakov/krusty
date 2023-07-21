@@ -1,7 +1,7 @@
 use cached::proc_macro::cached;
 use cached::{SizedCache, TimedCache, TimedSizedCache};
 
-use crate::database::{repository::Repository, types};
+use crate::database::{repository::AsyncRepository, types};
 
 #[cached(
     type = "TimedCache<String, Vec<types::Tag>>",
@@ -9,7 +9,7 @@ use crate::database::{repository::Repository, types};
     result = true,
     convert = "{ String::default() }"
 )]
-pub async fn tags(r: &mut Repository) -> anyhow::Result<Vec<types::Tag>> {
+pub async fn tags(r: &mut AsyncRepository) -> anyhow::Result<Vec<types::Tag>> {
     r.tags().await
 }
 
@@ -20,7 +20,7 @@ pub async fn tags(r: &mut Repository) -> anyhow::Result<Vec<types::Tag>> {
     convert = r#"{ format!("{t}") }"#
 )]
 pub async fn media_info_by_tag_text(
-    r: &mut Repository,
+    r: &mut AsyncRepository,
     t: &str,
 ) -> anyhow::Result<Vec<types::MediaInfo>> {
     r.media_info_by_tag_text(t).await
@@ -32,7 +32,7 @@ pub async fn media_info_by_tag_text(
     result = true,
     convert = r#"{ format!("{n}") }"#
 )]
-pub async fn media_data_by_name(r: &mut Repository, n: &str) -> anyhow::Result<Vec<u8>> {
+pub async fn media_data_by_name(r: &mut AsyncRepository, n: &str) -> anyhow::Result<Vec<u8>> {
     r.media_data_by_name(n).await
 }
 
@@ -43,7 +43,7 @@ pub async fn media_data_by_name(r: &mut Repository, n: &str) -> anyhow::Result<V
     convert = r#"{ format!("{:?}", t) }"#
 )]
 pub async fn media_info_by_feature_type(
-    r: &mut Repository,
+    r: &mut AsyncRepository,
     t: types::MediaFeatureType,
 ) -> anyhow::Result<Vec<types::MediaInfo>> {
     r.media_info_by_feature_type(t).await

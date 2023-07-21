@@ -6,12 +6,14 @@ mod utils;
 use chrono::Duration;
 use deadpool::managed::Pool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use futures::future;
 use percentage::{PercentageDecimal, PercentageInteger};
 use std::sync::Arc;
 use teloxide::prelude::*;
 
 use self::ctx::Ctx;
 use self::features::dupl_checker::send_media_if_forwarded_before;
+use self::features::scheduled_messages::start_messages_scheduling;
 use self::features::tag_detector::send_media_on_text_trigger;
 use self::utils::is_time_passed;
 
@@ -30,6 +32,11 @@ pub async fn start_bot(
         pool,
     ));
 
+    let scheduler_task = tokio::spawn(start_messages_scheduling(
+        bot.clone(),
+        ctx.repository.clone(),
+    ));
+
     let handler = Update::filter_message()
         .filter(|msg: Message, _: Arc<Ctx>| msg.chat.is_supergroup())
         .branch(
@@ -44,11 +51,14 @@ pub async fn start_bot(
             })
             .endpoint(send_media_on_text_trigger),
         );
+    let listener_task = tokio::spawn(async move {
+        Dispatcher::builder(bot.clone(), handler)
+            .dependencies(dptree::deps![ctx])
+            .enable_ctrlc_handler()
+            .build()
+            .dispatch()
+            .await
+    });
 
-    Dispatcher::builder(bot, handler)
-        .dependencies(dptree::deps![ctx])
-        .enable_ctrlc_handler()
-        .build()
-        .dispatch()
-        .await;
+    future::join_all([listener_task, scheduler_task]).await;
 }

@@ -5,13 +5,11 @@ use teloxide::{prelude::*, Bot};
 
 use crate::{
     bot::{
+        cache::media_info_by_feature_type,
         ctx::Ctx,
-        utils::{get_random_media_info_for_feature_type, is_time_passed, send_media},
+        utils::{get_random_media_info, is_time_passed, send_media},
     },
-    database::{
-        repository::Repository,
-        types::{self, MediaFeatureType},
-    },
+    database::types::{ForwardedMessage, MediaFeatureType},
 };
 
 pub async fn send_media_if_forwarded_before(
@@ -34,18 +32,19 @@ pub async fn send_media_if_forwarded_before(
         .id
         .0;
 
-    let mut repository = Repository::new(ctx.pool.clone());
+    let mut repository = ctx.repository.clone();
     let forwarded_message = repository
         .forwarded_message_by_ids(chat_id.0, forwarded_chat_id, forwarded_message_id)
         .await?;
 
     if let Some(forwarded_message) = forwarded_message {
-        if let Some(media) = get_random_media_info_for_feature_type(
-            MediaFeatureType::DuplicatedForwardedMessageDetection,
+        let media_infos = media_info_by_feature_type(
             &mut repository,
+            MediaFeatureType::DuplicatedForwardedMessageDetection,
         )
-        .await
-        {
+        .await?;
+
+        if let Some(media) = get_random_media_info(&media_infos) {
             {
                 log::debug!("Locking duplicate forward chat mutex");
                 let mut chat_times = ctx.duplicate_forward_timestamps.lock().await;
@@ -58,18 +57,18 @@ pub async fn send_media_if_forwarded_before(
             }
 
             send_media(
-                &media,
+                media,
                 &mut repository,
                 bot,
                 chat_id,
-                message_id,
+                Some(message_id),
                 Some(forwarded_message.message_url),
             )
             .await?
         }
     } else {
         repository
-            .insert_forward_message(&types::ForwardedMessage {
+            .insert_forward_message(&ForwardedMessage {
                 chat_id: chat_id.0,
                 forwarded_message_id,
                 message_url: message_url.to_string(),

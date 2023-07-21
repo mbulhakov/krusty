@@ -4,6 +4,7 @@
 Yet another TG bot. Does a few tricks:
 - Checks hot words in the message => sends a media as a response (voice, video, picture) with a specific chance. The hot words are named tags in code and can be either plain words or regexp patterns.
 - Checks forwarded posts from TG channels on duplication => sends a media as a response (voice, video, picture).
+- Sends scheduled messages with media using cron jobs.
 
 Works in supergroups.
 
