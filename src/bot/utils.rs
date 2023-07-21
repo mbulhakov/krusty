@@ -11,21 +11,16 @@ use crate::database::types::{MediaInfo, MediaType};
 use super::cache::media_data_by_name;
 
 macro_rules! send {
-    ($request:expr, $caption:expr, $message_id:expr) => {
+    ($request:expr, $caption:expr, $message_id:expr) => {{
+        let r = $request
+            .caption($caption.unwrap_or_default())
+            .disable_notification(true);
         if $message_id.is_some() {
-            $request
-                .caption($caption.unwrap_or_default())
-                .disable_notification(true)
-                .reply_to_message_id($message_id.unwrap())
-                .await?;
+            r.reply_to_message_id($message_id.unwrap()).await?;
         } else {
-            $request
-                .caption($caption.unwrap_or_default())
-                .disable_notification(true)
-                .send()
-                .await?;
+            r.send().await?;
         }
-    };
+    }};
 }
 
 pub async fn send_media(
@@ -39,16 +34,25 @@ pub async fn send_media(
     let data = media_data_by_name(repository, &media.name).await?;
     match media.type_ {
         MediaType::Voice => {
-            let r = bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)));
-            send!(r, caption, message_id)
+            send!(
+                bot.send_voice(chat_id, InputFile::memory(Bytes::from(data))),
+                caption,
+                message_id
+            )
         }
         MediaType::Picture => {
-            let r = bot.send_photo(chat_id, InputFile::memory(Bytes::from(data)));
-            send!(r, caption, message_id)
+            send!(
+                bot.send_photo(chat_id, InputFile::memory(Bytes::from(data))),
+                caption,
+                message_id
+            )
         }
         MediaType::Video => {
-            let r = bot.send_video(chat_id, InputFile::memory(Bytes::from(data)));
-            send!(r, caption, message_id)
+            send!(
+                bot.send_video(chat_id, InputFile::memory(Bytes::from(data))),
+                caption,
+                message_id
+            )
         }
     }
 
