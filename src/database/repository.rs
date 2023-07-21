@@ -8,13 +8,14 @@ use crate::schema::forwarded_messages::dsl::*;
 use crate::schema::media;
 use crate::schema::media::dsl::*;
 
-pub struct Repository {
+#[derive(Clone)]
+pub struct AsyncRepository {
     pool: Pool<AsyncDieselConnectionManager<diesel_async::AsyncPgConnection>>,
 }
 
-impl Repository {
+impl AsyncRepository {
     pub fn new(pool: Pool<AsyncDieselConnectionManager<diesel_async::AsyncPgConnection>>) -> Self {
-        Repository { pool }
+        AsyncRepository { pool }
     }
 
     pub async fn tags(&mut self) -> anyhow::Result<Vec<types::Tag>> {
@@ -108,6 +109,32 @@ impl Repository {
         Ok(media
             .inner_join(media_to_feature::table)
             .filter(media_to_feature::feature_type.eq(t))
+            .select((media::name, media::type_))
+            .load::<types::MediaInfo>(&mut *conn)
+            .await?)
+    }
+
+    pub async fn cron_jobs(&mut self) -> anyhow::Result<Vec<types::CroneJob>> {
+        use crate::schema::cron_jobs::dsl::*;
+
+        let mut conn = self.pool.get().await?;
+
+        Ok(cron_jobs.load::<types::CroneJob>(&mut *conn).await?)
+    }
+
+    pub async fn media_info_by_cron_job_id(
+        &mut self,
+        id_: i32,
+    ) -> anyhow::Result<Vec<types::MediaInfo>> {
+        use crate::schema::cron_jobs;
+        use crate::schema::cron_jobs::dsl::*;
+        use crate::schema::media_to_cron_job;
+
+        let mut conn = self.pool.get().await?;
+
+        Ok(cron_jobs
+            .filter(cron_jobs::id.eq(id_))
+            .inner_join(media_to_cron_job::table.inner_join(media::table))
             .select((media::name, media::type_))
             .load::<types::MediaInfo>(&mut *conn)
             .await?)

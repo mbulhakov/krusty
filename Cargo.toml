@@ -16,6 +16,7 @@ diesel-async = { version = "0.3.1", features = ["deadpool", "postgres"] }
 diesel-derive-enum = { version = "2.0.0-rc.0", features = ["postgres"] }
 diesel_migrations = "2.0.0"
 fancy-regex = "0.11.0"
+futures = "0.3.5"
 hyper = { version = "0.14.20", features = ["server"] }
 levenshtein = "1.0.5"
 log = "0.4"
@@ -29,6 +30,7 @@ remove_dir_all = "0.8.0"
 teloxide = { version = "0.12.2", features = ["macros", "auto-send"] }
 time = "0.3.23"
 tokio = { version =  "1.8", features = ["rt-multi-thread", "macros"] }
+tokio-cron-scheduler = "0.9.4"
 tracing-unwrap = "0.10.0"
 
 [target.'cfg(unix)'.dependencies]

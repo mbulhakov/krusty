@@ -5,66 +5,62 @@ use std::cmp::Ordering;
 use teloxide::types::MessageId;
 use teloxide::{prelude::*, types::InputFile, Bot};
 
-use crate::bot::cache::media_info_by_feature_type;
-use crate::database::repository::Repository;
-use crate::database::types::{self, MediaInfo, MediaType};
+use crate::database::repository::AsyncRepository;
+use crate::database::types::{MediaInfo, MediaType};
 
 use super::cache::media_data_by_name;
 
+macro_rules! send {
+    ($request:expr, $caption:expr, $message_id:expr) => {
+        if $message_id.is_some() {
+            $request
+                .caption($caption.unwrap_or_default())
+                .disable_notification(true)
+                .reply_to_message_id($message_id.unwrap())
+                .await?;
+        } else {
+            $request
+                .caption($caption.unwrap_or_default())
+                .disable_notification(true)
+                .send()
+                .await?;
+        }
+    };
+}
+
 pub async fn send_media(
     media: &MediaInfo,
-    repository: &mut Repository,
+    repository: &mut AsyncRepository,
     bot: Bot,
     chat_id: ChatId,
-    message_id: MessageId,
+    message_id: Option<MessageId>,
     caption: Option<String>,
 ) -> anyhow::Result<()> {
     let data = media_data_by_name(repository, &media.name).await?;
     match media.type_ {
         MediaType::Voice => {
-            bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)))
-                .caption(caption.unwrap_or_default())
-                .disable_notification(true)
-                .reply_to_message_id(message_id)
-                .await?;
+            let r = bot.send_voice(chat_id, InputFile::memory(Bytes::from(data)));
+            send!(r, caption, message_id)
         }
         MediaType::Picture => {
-            bot.send_photo(chat_id, InputFile::memory(Bytes::from(data)))
-                .caption(caption.unwrap_or_default())
-                .disable_notification(true)
-                .reply_to_message_id(message_id)
-                .await?;
+            let r = bot.send_photo(chat_id, InputFile::memory(Bytes::from(data)));
+            send!(r, caption, message_id)
         }
         MediaType::Video => {
-            bot.send_video(chat_id, InputFile::memory(Bytes::from(data)))
-                .caption(caption.unwrap_or_default())
-                .disable_notification(true)
-                .reply_to_message_id(message_id)
-                .await?;
+            let r = bot.send_video(chat_id, InputFile::memory(Bytes::from(data)));
+            send!(r, caption, message_id)
         }
     }
 
     Ok(())
 }
 
-pub async fn get_random_media_info_for_feature_type(
-    type_: types::MediaFeatureType,
-    repository: &mut Repository,
-) -> Option<MediaInfo> {
-    let media_infos = match media_info_by_feature_type(repository, type_).await {
-        Ok(result) => Some(result),
-        Err(e) => {
-            log::error!("{e}");
-            None
-        }
-    };
-
-    if let Some(media_infos) = media_infos {
-        return Some(media_infos[rand::thread_rng().gen::<usize>() % media_infos.len()].to_owned());
+pub fn get_random_media_info(media_infos: &[MediaInfo]) -> Option<&MediaInfo> {
+    if media_infos.is_empty() {
+        return None;
     }
 
-    log::warn!("No media associated with type");
-    None
+    Some(&media_infos[rand::thread_rng().gen::<usize>() % media_infos.len()])
 }
 
 pub fn is_time_passed(datetime: &DateTime<Utc>, duration: &Duration) -> bool {

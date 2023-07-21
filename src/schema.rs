@@ -15,6 +15,26 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    chats (id) {
+        id -> Int4,
+        chat_id -> Int8,
+    }
+}
+
+diesel::table! {
+    cron_jobs (id) {
+        id -> Int4,
+        #[max_length = 255]
+        pattern -> Varchar,
+        chat_id -> Nullable<Int8>,
+        #[max_length = 255]
+        caption -> Nullable<Varchar>,
+        #[max_length = 255]
+        description -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     forwarded_messages (id) {
         id -> Int4,
         chat_id -> Int8,
@@ -36,6 +56,14 @@ diesel::table! {
         #[sql_name = "type"]
         type_ -> MediaType,
         data -> Bytea,
+    }
+}
+
+diesel::table! {
+    media_to_cron_job (id) {
+        id -> Int4,
+        media_id -> Int4,
+        cron_job_id -> Int4,
     }
 }
 
@@ -71,13 +99,18 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(media_to_cron_job -> cron_jobs (cron_job_id));
+diesel::joinable!(media_to_cron_job -> media (media_id));
 diesel::joinable!(media_to_feature -> media (media_id));
 diesel::joinable!(tag_to_media -> media (media_id));
 diesel::joinable!(tag_to_media -> tags (tag_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    chats,
+    cron_jobs,
     forwarded_messages,
     media,
+    media_to_cron_job,
     media_to_feature,
     tag_to_media,
     tags,
