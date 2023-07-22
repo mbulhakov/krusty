@@ -7,22 +7,13 @@ use crate::{
     database::{repository::AsyncRepository, types::CroneJob},
 };
 
-pub async fn start_messages_scheduling(bot: teloxide::Bot, mut repository: AsyncRepository) {
-    let cron_jobs = match repository.cron_jobs().await {
-        Err(e) => {
-            log::error!("Failed to get cron jobs: '{e}'");
-            return;
-        }
-        Ok(r) => r,
-    };
+pub async fn create_scheduler(
+    bot: teloxide::Bot,
+    mut repository: AsyncRepository,
+) -> anyhow::Result<JobScheduler> {
+    let cron_jobs = repository.cron_jobs().await?;
 
-    let sched = match JobScheduler::new().await {
-        Err(e) => {
-            log::error!("Failed to create job scheduler: '{e}'");
-            return;
-        }
-        Ok(r) => r,
-    };
+    let sched = JobScheduler::new().await?;
 
     for cj in cron_jobs {
         let bot: teloxide::Bot = bot.clone();
@@ -41,22 +32,16 @@ pub async fn start_messages_scheduling(bot: teloxide::Bot, mut repository: Async
             })
         });
         if let Err(e) = job {
-            log::error!("Failed to create cron job: '{e}'");
+            log::error!("Failed to create cron job '{pattern}': '{e}'");
             continue;
         }
 
         if let Err(e) = sched.add(job.unwrap()).await {
-            log::error!("Failed to add cron job: '{e}'");
+            log::error!("Failed to add cron job '{pattern}': '{e}'");
         }
     }
 
-    if let Err(e) = sched.start().await {
-        log::error!("Failed to start job scheduler: '{e}'");
-    }
-
-    loop {
-        tokio::time::sleep(core::time::Duration::from_secs(1)).await;
-    }
+    Ok(sched)
 }
 
 async fn send_scheduled_message(

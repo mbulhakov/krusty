@@ -998,7 +998,7 @@ dependencies = [
 
 [[package]]
 name = "krusty"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1010,7 +1010,6 @@ dependencies = [
  "diesel-derive-enum",
  "diesel_migrations",
  "fancy-regex",
- "futures",
  "hyper",
  "levenshtein",
  "log",
