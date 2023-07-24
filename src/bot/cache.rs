@@ -1,8 +1,10 @@
 use cached::proc_macro::cached;
 use cached::{SizedCache, TimedCache, TimedSizedCache};
+use tracing_attributes::instrument;
 
 use crate::database::{repository::AsyncRepository, types};
 
+#[instrument(skip(r))]
 #[cached(
     type = "TimedCache<String, Vec<types::Tag>>",
     create = "{ TimedCache::with_lifespan(3600) }",
@@ -13,6 +15,7 @@ pub async fn tags(r: &mut AsyncRepository) -> anyhow::Result<Vec<types::Tag>> {
     r.tags().await
 }
 
+#[instrument(skip(r))]
 #[cached(
     type = "TimedSizedCache<String, Vec<types::MediaInfo>>",
     create = "{ TimedSizedCache::with_size_and_lifespan(50, 3600) }",
@@ -26,6 +29,7 @@ pub async fn media_info_by_tag_text(
     r.media_info_by_tag_text(t).await
 }
 
+#[instrument(skip(r))]
 #[cached(
     type = "SizedCache<String, Vec<u8>>",
     create = "{ SizedCache::with_size(100) }",
@@ -36,6 +40,7 @@ pub async fn media_data_by_name(r: &mut AsyncRepository, n: &str) -> anyhow::Res
     r.media_data_by_name(n).await
 }
 
+#[instrument(skip(r))]
 #[cached(
     type = "TimedCache<String, Vec<types::MediaInfo>>",
     create = "{ TimedCache::with_lifespan(3600) }",

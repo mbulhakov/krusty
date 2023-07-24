@@ -38,7 +38,7 @@ pub struct MediaInfo {
     pub type_: MediaType,
 }
 
-#[derive(Queryable, Clone, Insertable)]
+#[derive(Queryable, Clone, Insertable, Debug)]
 #[diesel(table_name = forwarded_messages)]
 pub struct ForwardedMessage {
     pub chat_id: i64,

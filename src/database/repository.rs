@@ -1,6 +1,7 @@
 use deadpool::managed::Pool;
 use diesel::{insert_into, prelude::*};
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, RunQueryDsl};
+use tracing_attributes::instrument;
 
 use crate::database::types;
 use crate::schema::forwarded_messages;
@@ -18,6 +19,7 @@ impl AsyncRepository {
         AsyncRepository { pool }
     }
 
+    #[instrument(skip(self))]
     pub async fn tags(&mut self) -> anyhow::Result<Vec<types::Tag>> {
         use crate::schema::tags;
         use crate::schema::tags::dsl::*;
@@ -30,6 +32,7 @@ impl AsyncRepository {
             .await?)
     }
 
+    #[instrument(skip(self))]
     pub async fn media_info_by_tag_text(
         &mut self,
         t: &str,
@@ -47,6 +50,7 @@ impl AsyncRepository {
             .await?)
     }
 
+    #[instrument(skip(self))]
     pub async fn media_data_by_name(&mut self, n: &str) -> anyhow::Result<Vec<u8>> {
         let mut conn = self.pool.get().await?;
 
@@ -57,6 +61,7 @@ impl AsyncRepository {
             .await?)
     }
 
+    #[instrument(skip(self))]
     pub async fn forwarded_message_by_ids(
         &mut self,
         c_id: i64,
@@ -85,6 +90,7 @@ impl AsyncRepository {
         }
     }
 
+    #[instrument(skip(self))]
     pub async fn insert_forward_message(
         &mut self,
         message: &types::ForwardedMessage,
@@ -98,6 +104,7 @@ impl AsyncRepository {
         Ok(())
     }
 
+    #[instrument(skip(self))]
     pub async fn media_info_by_feature_type(
         &mut self,
         t: types::MediaFeatureType,
@@ -114,6 +121,7 @@ impl AsyncRepository {
             .await?)
     }
 
+    #[instrument(skip(self))]
     pub async fn cron_jobs(&mut self) -> anyhow::Result<Vec<types::CroneJob>> {
         use crate::schema::cron_jobs::dsl::*;
 
@@ -122,6 +130,7 @@ impl AsyncRepository {
         Ok(cron_jobs.load::<types::CroneJob>(&mut *conn).await?)
     }
 
+    #[instrument(skip(self))]
     pub async fn media_info_by_cron_job_id(
         &mut self,
         id_: i32,
