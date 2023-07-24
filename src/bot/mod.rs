@@ -56,14 +56,10 @@ pub async fn start_bot(
             })
             .endpoint(send_media_on_text_trigger),
         );
-
-    let _ = tokio::spawn(async move {
-        Dispatcher::builder(bot.clone(), handler)
-            .dependencies(dptree::deps![ctx])
-            .enable_ctrlc_handler()
-            .build()
-            .dispatch()
-            .await
-    })
-    .await;
+    Dispatcher::builder(bot.clone(), handler)
+        .dependencies(dptree::deps![ctx])
+        .enable_ctrlc_handler()
+        .build()
+        .dispatch()
+        .await;
 }
