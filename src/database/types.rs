@@ -4,14 +4,14 @@ use diesel_derive_enum::*;
 use crate::schema::forwarded_messages;
 
 #[derive(Debug, PartialEq, Eq, DbEnum, Clone)]
-#[DieselTypePath = "crate::schema::sql_types::TagType"]
+#[ExistingTypePath = "crate::schema::sql_types::TagType"]
 pub enum TagType {
     Ordinary,
     Regexp,
 }
 
 #[derive(Debug, PartialEq, Eq, DbEnum, Clone)]
-#[DieselTypePath = "crate::schema::sql_types::MediaType"]
+#[ExistingTypePath = "crate::schema::sql_types::MediaType"]
 pub enum MediaType {
     Voice,
     Video,
@@ -19,7 +19,7 @@ pub enum MediaType {
 }
 
 #[derive(Debug, PartialEq, Eq, DbEnum, Clone)]
-#[DieselTypePath = "crate::schema::sql_types::MediaFeatureType"]
+#[ExistingTypePath = "crate::schema::sql_types::MediaFeatureType"]
 pub enum MediaFeatureType {
     TextTrigger,
     DuplicatedForwardedMessageDetection,

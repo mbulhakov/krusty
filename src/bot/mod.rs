@@ -44,12 +44,12 @@ pub async fn start_bot(
 
     let handler = Update::filter_message()
         .filter(|msg: Message, _: Arc<Ctx>| msg.chat.is_supergroup())
-        /*.branch(
+        .branch(
             dptree::filter(|msg: Message, _: Arc<Ctx>| {
                 msg.forward_from_message_id().is_some() && msg.forward_from_chat().is_some()
             })
             .endpoint(send_media_if_forwarded_before),
-        )*/
+        )
         .branch(
             dptree::filter(move |msg: Message, _: Arc<Ctx>| {
                 !is_time_passed(&msg.date, &ignore_message_older_than)

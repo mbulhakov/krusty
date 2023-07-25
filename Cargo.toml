@@ -13,7 +13,7 @@ chrono = "0.4.0"
 deadpool = "0.9"
 diesel = { version = "2.0.0", features = ["postgres"] }
 diesel-async = { version = "0.3.1", features = ["deadpool", "postgres"] }
-diesel-derive-enum = { version = "2.0.0-rc.0", features = ["postgres"] }
+diesel-derive-enum = { version = "2.1", features = ["postgres"] }
 diesel_migrations = "2.0.0"
 fancy-regex = "0.11.0"
 hyper = { version = "0.14.20", features = ["server"] }
