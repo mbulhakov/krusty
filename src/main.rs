@@ -4,7 +4,9 @@ use diesel::pg::PgConnection;
 use diesel::Connection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use krusty::hyper_log_filter;
 use log::LevelFilter;
+use log4rs::config::Deserializers;
 use percentage::Percentage;
 use std::env;
 use std::{convert::Infallible, net::SocketAddr};
@@ -31,7 +33,12 @@ fn run_migrations(db_uri: &str) {
 
 #[tokio::main]
 async fn main() {
-    let mut config = log4rs::config::load_config_file("log4rs.yml", Default::default())
+    let mut desirializers = Deserializers::default();
+    desirializers.insert(
+        "hyper_log_filter",
+        hyper_log_filter::HyperFilterDeserializer {},
+    );
+    let mut config = log4rs::config::load_config_file("log4rs.yml", desirializers)
         .expect("Failed to load logger config");
 
     let log_level = env::var("LOG_LEVEL").map_or_else(

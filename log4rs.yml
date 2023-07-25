@@ -3,12 +3,16 @@ appenders:
     kind: console
     encoder:
       pattern: " {({l}):5.5} | {M} | {f}:{L}: {m}{n}"
+    filters:
+      - kind: hyper_log_filter
 
   krusty_rolling_file:
     kind: rolling_file
     path: /krusty/logs/krusty_{}.gz
     encoder:
       pattern: " {d(%Y-%m-%d %H:%M:%S)} | [{({l}):5.5}] | {M} | {f}:{L}: {m}{n}"
+    filters:
+      - kind: hyper_log_filter
     policy:
       trigger:
         kind: size
@@ -32,36 +36,6 @@ loggers:
       - krusty_stdout
       - krusty_rolling_file
   mio::poll:
-    level: error
-    appenders:
-      - krusty_stdout
-      - krusty_rolling_file
-  hyper::client::pool:
-    level: error
-    appenders:
-      - krusty_stdout
-      - krusty_rolling_file
-  hyper::proto::h1::role:
-    level: error
-    appenders:
-      - krusty_stdout
-      - krusty_rolling_file
-  hyper::proto::h1::encode:
-    level: error
-    appenders:
-      - krusty_stdout
-      - krusty_rolling_file
-  hyper::proto::h1::io:
-    level: error
-    appenders:
-      - krusty_stdout
-      - krusty_rolling_file
-  hyper::proto::h1::conn:
-    level: error
-    appenders:
-      - krusty_stdout
-      - krusty_rolling_file
-  hyper::proto::h1::decode:
     level: error
     appenders:
       - krusty_stdout
