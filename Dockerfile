@@ -57,6 +57,9 @@ WORKDIR /krusty
 COPY --from=builder /krusty/target/release/krusty ./
 COPY --from=builder /krusty/log4rs.yml ./
 
+RUN sudo adduser krusty
+RUN sudo adduser krusty sudo
+
 USER krusty:krusty
 
 CMD ["/krusty/krusty"]
