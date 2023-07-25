@@ -1,0 +1,68 @@
+appenders:
+  krusty_stdout:
+    kind: console
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} | {({l}):5.5} | {M} | {f}:{L} — {m}{n}"
+
+  krusty_rolling_file:
+    kind: rolling_file
+    path: logs/krusty/krusty.log
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} | {({l}):5.5} | {M} | {f}:{L} — {m}{n}"
+    policy:
+      trigger:
+        kind: size
+        limit: 30 mb
+      roller:
+        kind: fixed_window
+        pattern: logs/krusty/krusty_{}.gz
+        count: 20
+        base: 1
+
+root:
+  level: info
+  appenders:
+    - krusty_stdout
+    - krusty_rolling_file
+
+loggers:
+  want:
+    level: error
+    appenders:
+      - krusty_stdout
+      - krusty_rolling_file
+  mio::poll:
+    level: error
+    appenders:
+      - krusty_stdout
+      - krusty_rolling_file
+  hyper::client::pool:
+    level: error
+    appenders:
+      - krusty_stdout
+      - krusty_rolling_file
+  hyper::proto::h1::role:
+    level: error
+    appenders:
+      - krusty_stdout
+      - krusty_rolling_file
+  hyper::proto::h1::encode:
+    level: error
+    appenders:
+      - krusty_stdout
+      - krusty_rolling_file
+  hyper::proto::h1::io:
+    level: error
+    appenders:
+      - krusty_stdout
+      - krusty_rolling_file
+  hyper::proto::h1::conn:
+    level: error
+    appenders:
+      - krusty_stdout
+      - krusty_rolling_file
+  hyper::proto::h1::decode:
+    level: error
+    appenders:
+      - krusty_stdout
+      - krusty_rolling_file

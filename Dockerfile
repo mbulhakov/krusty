@@ -55,6 +55,7 @@ COPY --from=builder /etc/group /etc/group
 WORKDIR /krusty
 
 COPY --from=builder /krusty/target/release/krusty ./
+COPY --from=builder /krusty/log4rs.yml ./
 
 USER krusty:krusty
 

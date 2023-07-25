@@ -4,6 +4,7 @@ use diesel::pg::PgConnection;
 use diesel::Connection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use log::LevelFilter;
 use percentage::Percentage;
 use std::env;
 use std::{convert::Infallible, net::SocketAddr};
@@ -30,7 +31,24 @@ fn run_migrations(db_uri: &str) {
 
 #[tokio::main]
 async fn main() {
-    pretty_env_logger::init();
+    let mut config = log4rs::config::load_config_file("log4rs.yml", Default::default())
+        .expect("Failed to load logger config");
+
+    let log_level = env::var("LOG_LEVEL").map_or_else(
+        |_| LevelFilter::Info,
+        |x| match x.to_lowercase().as_str() {
+            "info" => LevelFilter::Info,
+            "debug" => LevelFilter::Debug,
+            "warn" => LevelFilter::Warn,
+            "error" => LevelFilter::Error,
+            "trace" => LevelFilter::Trace,
+            "off" => LevelFilter::Off,
+            unknown => panic!("Unrecognized log level: '{unknown}'"),
+        },
+    );
+    config.root_mut().set_level(log_level);
+    log4rs::init_config(config).expect("Failed to init logger");
+
     log::info!("Starting bot...");
     let bot = Bot::from_env();
 

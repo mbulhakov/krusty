@@ -22,6 +22,7 @@ The bot can be configured only with environment variables.
 | MEDIA_SEND_CHANCE_IN_PERCENT | A chance of media being sent upon successful hot word detection | From 0 to 100 | 50 |
 | MAX_ACCEPTED_SCORE_SIMILARITY | Similarity score threshold. Lesser threshold implies more similarity is needed. Works for plain words. | From 0.0 to 1.0 | 0.26 |
 | DATABASE_URL | Postgres URI | Any valid url | ❌ |
+| LOG_LEVEL | log level| case insensitive: [off, error, warn, info, trace, debug] | info |
 
 Variables that have no default value are mandatory to be set.
 
