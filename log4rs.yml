@@ -6,7 +6,7 @@ appenders:
 
   krusty_rolling_file:
     kind: rolling_file
-    path: logs/krusty/krusty.log
+    path: /krusty/logs/krusty_{}.gz
     encoder:
       pattern: " [{({l}):5.5}] | {d(%Y-%m-%d %H:%M:%S)} | {M} | {f}:{L}: {m}{n}"
     policy:
@@ -15,7 +15,7 @@ appenders:
         limit: 30 mb
       roller:
         kind: fixed_window
-        pattern: logs/krusty/krusty_{}.gz
+        pattern: /krusty/logs/krusty_{}.gz
         count: 20
         base: 1
 
