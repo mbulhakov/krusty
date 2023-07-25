@@ -31,7 +31,7 @@ teloxide = { version = "0.12.2", features = ["macros", "auto-send"] }
 time = "0.3.23"
 tokio = { version =  "1.8", features = ["rt-multi-thread", "macros"] }
 tokio-cron-scheduler = "0.9.4"
-tracing = { version = "0.1.37", features = ["log"] }
+tracing = { version = "0.1.37", features = ["log", "log-always"] }
 tracing-attributes = "0.1.26"
 tracing-unwrap = "0.10.0"
 
