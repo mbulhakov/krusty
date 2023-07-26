@@ -12,7 +12,7 @@ pub struct HyperFilter {}
 
 impl Filter for HyperFilter {
     fn filter(&self, record: &Record) -> Response {
-        if record.module_path().unwrap_or_default().contains("hyper") {
+        if record.module_path().unwrap_or_default().starts_with("hyper") {
             Response::Reject
         } else {
             Response::Neutral
