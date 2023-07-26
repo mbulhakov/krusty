@@ -57,6 +57,7 @@ WORKDIR /krusty
 COPY --from=builder /krusty/target/release/krusty ./
 COPY --from=builder /krusty/log4rs.yml ./
 
+RUN chown -R krusty:krusty /krusty
 USER krusty:krusty
 
 CMD ["/krusty/krusty"]
