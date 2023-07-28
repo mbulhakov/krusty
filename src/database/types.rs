@@ -16,6 +16,12 @@ pub enum MediaType {
     Voice,
     Video,
     Picture,
+    Animation,
+    PlainText,
+    Document,
+    VideoNote,
+    Sticker,
+    Unknown,
 }
 
 #[derive(Debug, PartialEq, Eq, DbEnum, Clone)]

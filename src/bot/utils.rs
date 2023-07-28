@@ -23,6 +23,17 @@ macro_rules! send {
     }};
 }
 
+macro_rules! send_no_caption {
+    ($request:expr, $message_id:expr) => {{
+        let r = $request.disable_notification(true);
+        if $message_id.is_some() {
+            r.reply_to_message_id($message_id.unwrap()).await?;
+        } else {
+            r.send().await?;
+        }
+    }};
+}
+
 pub async fn send_media(
     media: &MediaInfo,
     repository: &mut AsyncRepository,
@@ -33,27 +44,48 @@ pub async fn send_media(
 ) -> anyhow::Result<()> {
     let data = media_data_by_name(repository, &media.name).await?;
     match media.type_ {
-        MediaType::Voice => {
-            send!(
-                bot.send_voice(chat_id, InputFile::memory(Bytes::from(data))),
-                caption,
-                message_id
-            )
-        }
-        MediaType::Picture => {
-            send!(
-                bot.send_photo(chat_id, InputFile::memory(Bytes::from(data))),
-                caption,
-                message_id
-            )
-        }
-        MediaType::Video => {
-            send!(
-                bot.send_video(chat_id, InputFile::memory(Bytes::from(data))),
-                caption,
-                message_id
-            )
-        }
+        MediaType::Voice => send!(
+            bot.send_voice(chat_id, InputFile::memory(Bytes::from(data))),
+            caption,
+            message_id
+        ),
+        MediaType::Picture => send!(
+            bot.send_photo(chat_id, InputFile::memory(Bytes::from(data))),
+            caption,
+            message_id
+        ),
+        MediaType::Video => send!(
+            bot.send_video(chat_id, InputFile::memory(Bytes::from(data))),
+            caption,
+            message_id
+        ),
+        MediaType::Animation => send!(
+            bot.send_animation(chat_id, InputFile::memory(Bytes::from(data))),
+            caption,
+            message_id
+        ),
+        MediaType::PlainText => send_no_caption!(
+            bot.send_message(
+                chat_id,
+                String::from_utf8(data).expect("Failed to convert from bytes"),
+            ),
+            message_id
+        ),
+        MediaType::Document => send!(
+            bot.send_document(chat_id, InputFile::memory(Bytes::from(data))),
+            caption,
+            message_id
+        ),
+        MediaType::VideoNote => send!(
+            bot.send_document(chat_id, InputFile::memory(Bytes::from(data))),
+            caption,
+            message_id
+        ),
+        MediaType::Sticker => send_no_caption!(
+            bot.send_sticker(chat_id, InputFile::memory(Bytes::from(data))),
+            message_id.map(|x| x.0)
+        ),
+        MediaType::Unknown => log::error!("Unknown media file type, check DB"),
     }
 
     Ok(())
