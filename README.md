@@ -2,7 +2,7 @@
 
 ### What
 Yet another TG bot. Does a few tricks:
-- Checks hot words in the message => sends a media as a response (voice, video, picture) with a specific chance. The hot words can be either plain words or regexp patterns. Supports both by-word and whole-text matching. The plain text is checked for similarity using the unsophisticated inequality ```levenstein_distance(x,y) / max(x.len, y.len) <= max_accepted_score_similarity```.
+- Checks hot words in the message => sends a media as a response (voice, video, picture) with a specific chance. The hot words can be either plain words or regexp patterns. Supports both by-word and whole-text matching. The plain text is checked for similarity using the unsophisticated inequality ```levenshtein_distance(x, y) / max(x.len, y.len) <= max_accepted_score_similarity```.
 - Checks forwarded posts from TG channels on duplication => sends a media as a response (voice, video, picture).
 - Sends scheduled messages with media using cron jobs.
 
