@@ -19,13 +19,13 @@ pub struct Scheduler {
 
 impl Scheduler {
     pub async fn start(&mut self) -> anyhow::Result<()> {
-        self.update().await?;
+        self.sync().await?;
         self.inner.start().await?;
 
         Ok(())
     }
 
-    pub async fn update(&mut self) -> anyhow::Result<()> {
+    pub async fn sync(&mut self) -> anyhow::Result<()> {
         let cron_jobs = self.repository.cron_jobs().await?;
         let job_ids: HashSet<_> = cron_jobs.iter().map(|x| x.id).collect();
 

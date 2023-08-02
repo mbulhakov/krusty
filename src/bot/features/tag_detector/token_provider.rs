@@ -3,7 +3,7 @@ use teloxide::prelude::*;
 use teloxide::types::MessageEntityKind;
 
 fn is_separator(ch: char) -> bool {
-    (' '..='/').contains(&ch) || (':'..='@').contains(&ch) || ('\\'..='`').contains(&ch)
+    matches!(ch, ' '..='/' | ':'..='@' | '\\'..='`')
 }
 
 #[automock]

@@ -46,9 +46,10 @@ pub async fn start_bot(
         }
 
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3600));
+        interval.tick().await; // ommit first immidiate tick
         loop {
             interval.tick().await;
-            if let Err(e) = scheduler.update().await {
+            if let Err(e) = scheduler.sync().await {
                 log::error!("Failed to update jobs list in scheduler: '{e}'");
             }
         }

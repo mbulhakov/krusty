@@ -25,8 +25,8 @@ impl Ctx {
         pool: Pool<AsyncDieselConnectionManager<diesel_async::AsyncPgConnection>>,
     ) -> Self {
         Ctx {
-            text_trigger_timestamps: Mutex::new(HashMap::new()),
-            duplicate_forward_timestamps: Mutex::new(HashMap::new()),
+            text_trigger_timestamps: Default::default(),
+            duplicate_forward_timestamps: Default::default(),
             media_timeout,
             media_being_sent_chance,
             similarity_threshold,

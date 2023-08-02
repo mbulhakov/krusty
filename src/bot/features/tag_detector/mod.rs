@@ -28,6 +28,10 @@ pub async fn send_media_on_text_trigger(
         let mut chat_times = ctx.text_trigger_timestamps.lock().await;
         if let Some(time) = chat_times.get(&message.chat.id) {
             if !is_time_passed(time, &ctx.media_timeout) {
+                log::debug!(
+                    "There is a timeout for chat '{}', skipping",
+                    message.chat.id
+                );
                 return Ok(());
             }
         }

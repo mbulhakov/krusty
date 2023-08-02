@@ -22,9 +22,9 @@ pub fn recognize_tag_in_tokens(
         .iter()
         .map(|x| x.to_lowercase())
         .collect::<Vec<_>>();
-    let tokens = tokens.iter().map(|x| x.as_str()).collect::<Vec<_>>();
+    let tokens: Vec<_> = tokens.iter().map(String::as_str).collect();
 
-    let mut tags = tag_provider.tags().iter().collect::<Vec<_>>();
+    let mut tags: Vec<_> = tag_provider.tags().iter().collect();
     tags.sort_by(|a, b| a.is_regexp.cmp(&b.is_regexp));
 
     let (ordinary_tags, regexp_tags) =
