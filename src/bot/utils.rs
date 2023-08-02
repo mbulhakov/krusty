@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use chrono::{prelude::*, Duration};
-use rand::Rng;
+use rand::seq::SliceRandom;
 use std::cmp::Ordering;
 use teloxide::types::MessageId;
 use teloxide::{prelude::*, types::InputFile, Bot};
@@ -86,11 +86,7 @@ pub async fn send_media(
 }
 
 pub fn get_random_media_info(media_infos: &[MediaInfo]) -> Option<&MediaInfo> {
-    if media_infos.is_empty() {
-        return None;
-    }
-
-    Some(&media_infos[rand::thread_rng().gen::<usize>() % media_infos.len()])
+    media_infos.choose(&mut rand::thread_rng())
 }
 
 pub fn is_time_passed(datetime: &DateTime<Utc>, duration: &Duration) -> bool {

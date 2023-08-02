@@ -4,7 +4,7 @@ use mockall::predicate::*;
 use ordered_float::OrderedFloat;
 use ordslice::Ext;
 use percentage::PercentageDecimal;
-use rand::Rng;
+use rand::seq::SliceRandom;
 use std::cmp::max;
 use std::collections::BTreeMap;
 use tracing_unwrap::ResultExt;
@@ -32,7 +32,7 @@ pub fn recognize_tag_in_tokens(
 
     let matched_regexps = process_regexp_tags(regexp_tags, token_provider.source(), &tokens);
     if !matched_regexps.is_empty() {
-        let mr = &matched_regexps[rand::thread_rng().gen::<usize>() % matched_regexps.len()];
+        let mr = matched_regexps.choose(&mut rand::thread_rng()).unwrap();
         log::debug!("Found matched regexp: '{}'", mr);
         return Some(mr.to_string());
     }
@@ -44,11 +44,9 @@ pub fn recognize_tag_in_tokens(
         similarity_threshold,
     );
 
-    match tags_to_scores.iter().next() {
-        Some(kv) => {
-            let (score, tags) = kv.to_owned();
-
-            let tag = &tags[rand::thread_rng().gen::<usize>() % tags.len()];
+    match tags_to_scores.first_key_value() {
+        Some((score, tags)) => {
+            let tag = tags.choose(&mut rand::thread_rng()).unwrap();
             log::debug!("Found a similarity: {{ tag '{}', score {} }}", tag, score);
             Some(tag.to_string())
         }
@@ -91,7 +89,7 @@ fn extract_matched_tags<'a>(
             if score <= similarity_threshold.value() {
                 tags_to_scores
                     .entry(OrderedFloat::from(score))
-                    .or_insert(Vec::new())
+                    .or_insert(Default::default())
                     .push(tag);
             }
         }
@@ -200,10 +198,10 @@ mod tests {
     #[test]
     fn test_unicode_scoring() {
         // expected results as: number of modifications / max len of string
-        assert_eq!(score("как", "кам"), 1f64 / 3f64);
-        assert_eq!(score("мультикак", "как"), 6f64 / 9f64);
-        assert_eq!(score("сума", "ура"), 2f64 / 4f64);
-        assert_eq!(score("hhhhрррр", "hр"), 6f64 / 8f64);
+        assert_eq!(score("как", "кам"), 1. / 3.);
+        assert_eq!(score("мультикак", "как"), 6. / 9.);
+        assert_eq!(score("сума", "ура"), 2. / 4.);
+        assert_eq!(score("hhhhрррр", "hр"), 6. / 8.);
     }
 
     #[test]
@@ -227,7 +225,7 @@ mod tests {
         let actual = recognize_tag_in_tokens(
             &token_provider,
             &tag_provider,
-            &Percentage::from_decimal(0.25f64),
+            &Percentage::from_decimal(0.25),
         );
         assert_eq!(actual, Some("^правильный$".to_string()));
     }
@@ -252,7 +250,7 @@ mod tests {
         let actual = recognize_tag_in_tokens(
             &token_provider,
             &tag_provider,
-            &Percentage::from_decimal(0.25f64),
+            &Percentage::from_decimal(0.25),
         );
         assert_eq!(actual, Some("^right$".to_string()));
     }
@@ -277,7 +275,7 @@ mod tests {
         let actual = recognize_tag_in_tokens(
             &token_provider,
             &tag_provider,
-            &Percentage::from_decimal(0.25f64),
+            &Percentage::from_decimal(0.25),
         );
         assert_eq!(actual, Some("^правильный$".to_string()));
     }
@@ -302,7 +300,7 @@ mod tests {
         let actual = recognize_tag_in_tokens(
             &token_provider,
             &tag_provider,
-            &Percentage::from_decimal(0.25f64),
+            &Percentage::from_decimal(0.25),
         );
         assert_eq!(actual, Some("праильнй".to_string()));
     }
@@ -324,7 +322,7 @@ mod tests {
         let actual = recognize_tag_in_tokens(
             &token_provider,
             &tag_provider,
-            &Percentage::from_decimal(0.25f64),
+            &Percentage::from_decimal(0.25),
         );
         assert_eq!(actual, None);
     }
@@ -352,7 +350,7 @@ mod tests {
         let actual = recognize_tag_in_tokens(
             &token_provider,
             &tag_provider,
-            &Percentage::from_decimal(0.25f64),
+            &Percentage::from_decimal(0.25),
         );
         assert_eq!(actual, Some("^token$".to_string()));
     }
@@ -377,7 +375,7 @@ mod tests {
         let actual = recognize_tag_in_tokens(
             &token_provider,
             &tag_provider,
-            &Percentage::from_decimal(0.25f64),
+            &Percentage::from_decimal(0.25),
         );
         assert_eq!(
             actual,
@@ -405,7 +403,7 @@ mod tests {
         let actual = recognize_tag_in_tokens(
             &token_provider,
             &tag_provider,
-            &Percentage::from_decimal(0.25f64),
+            &Percentage::from_decimal(0.25),
         );
         assert_eq!(actual, Some("this is the right tokee".to_string()));
     }
