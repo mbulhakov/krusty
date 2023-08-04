@@ -37,27 +37,48 @@ pub async fn send_media(
     caption: Option<String>,
 ) -> anyhow::Result<()> {
     let data = media_data_by_name(repository, &media.name).await?;
+
     match media.type_ {
-        MediaType::Voice => send_with_caption!(
-            bot.send_voice(chat_id, InputFile::memory(Bytes::from(data))),
-            caption,
-            message_id
-        ),
-        MediaType::Picture => send_with_caption!(
-            bot.send_photo(chat_id, InputFile::memory(Bytes::from(data))),
-            caption,
-            message_id
-        ),
-        MediaType::Video => send_with_caption!(
-            bot.send_video(chat_id, InputFile::memory(Bytes::from(data))),
-            caption,
-            message_id
-        ),
-        MediaType::Animation => send_with_caption!(
-            bot.send_animation(chat_id, InputFile::memory(Bytes::from(data))),
-            caption,
-            message_id
-        ),
+        MediaType::Voice => {
+            send_with_caption!(
+                bot.send_voice(
+                    chat_id,
+                    InputFile::memory(Bytes::from(data)).file_name(media.name.clone())
+                ),
+                caption,
+                message_id
+            )
+        }
+        MediaType::Picture => {
+            send_with_caption!(
+                bot.send_photo(
+                    chat_id,
+                    InputFile::memory(Bytes::from(data)).file_name(media.name.clone())
+                ),
+                caption,
+                message_id
+            )
+        }
+        MediaType::Video => {
+            send_with_caption!(
+                bot.send_video(
+                    chat_id,
+                    InputFile::memory(Bytes::from(data)).file_name(media.name.clone())
+                ),
+                caption,
+                message_id
+            )
+        }
+        MediaType::Animation => {
+            send_with_caption!(
+                bot.send_animation(
+                    chat_id,
+                    InputFile::memory(Bytes::from(data)).file_name(media.name.clone())
+                ),
+                caption,
+                message_id
+            )
+        }
         MediaType::PlainText => send!(
             bot.send_message(
                 chat_id,
@@ -65,18 +86,28 @@ pub async fn send_media(
             ),
             message_id
         ),
-        MediaType::Document => send_with_caption!(
-            bot.send_document(chat_id, InputFile::memory(Bytes::from(data))),
-            caption,
-            message_id
-        ),
-        MediaType::VideoNote => send_with_caption!(
-            bot.send_document(chat_id, InputFile::memory(Bytes::from(data))),
-            caption,
+        MediaType::Document => {
+            send_with_caption!(
+                bot.send_document(
+                    chat_id,
+                    InputFile::memory(Bytes::from(data)).file_name(media.name.clone())
+                ),
+                caption,
+                message_id
+            )
+        }
+        MediaType::VideoNote => send!(
+            bot.send_video_note(
+                chat_id,
+                InputFile::memory(Bytes::from(data)).file_name(media.name.clone())
+            ),
             message_id
         ),
         MediaType::Sticker => send!(
-            bot.send_sticker(chat_id, InputFile::memory(Bytes::from(data))),
+            bot.send_sticker(
+                chat_id,
+                InputFile::memory(Bytes::from(data)).file_name(media.name.clone())
+            ),
             message_id.map(|x| x.0)
         ),
         MediaType::Unknown => log::error!("Unknown media file type, check DB"),
