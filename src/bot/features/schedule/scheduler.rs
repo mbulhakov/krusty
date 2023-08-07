@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::anyhow;
+use futures::future;
 use teloxide::{types::ChatId, Bot};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use uuid::Uuid;
 
 use crate::{
-    bot::utils::{get_random_media_info, send_media},
+    bot::utils::{choose_random_media_info, send_media},
     database::{repository::AsyncRepository, types::CroneJob},
 };
 
@@ -29,17 +30,25 @@ impl Scheduler {
         let cron_jobs = self.repository.cron_jobs().await?;
         let job_ids: HashSet<_> = cron_jobs.iter().map(|x| x.id).collect();
 
-        let current_job_ids: HashSet<_> = self.ids_to_uids.keys().cloned().collect();
+        let scheduled_job_ids: HashSet<_> = self.ids_to_uids.keys().cloned().collect();
 
-        let obsolete_job_ids = current_job_ids.difference(&job_ids);
-        for id in obsolete_job_ids {
+        let obsolete_job_ids: Vec<_> = scheduled_job_ids.difference(&job_ids).collect();
+        let remove_task_iter = obsolete_job_ids.iter().map(|id| {
             let uuid = self.ids_to_uids.get(id).unwrap();
-            if let Err(e) = self.inner.remove(uuid).await {
-                log::error!("Failed to remove cron job with uuid '{uuid}': '{e}'");
-            }
+            self.inner.remove(uuid)
+        });
+
+        for (e, uuid) in future::join_all(remove_task_iter)
+            .await
+            .iter()
+            .zip(obsolete_job_ids)
+            .filter(|(r, _)| r.is_err())
+            .map(|(r, uuid)| (r.as_ref().unwrap_err(), uuid))
+        {
+            log::error!("Failed to remove cron job with uuid '{uuid}': '{e}'");
         }
 
-        let job_ids_to_add: HashSet<_> = job_ids.difference(&current_job_ids).collect();
+        let job_ids_to_add: HashSet<_> = job_ids.difference(&scheduled_job_ids).collect();
         for cj in cron_jobs
             .into_iter()
             .filter(|x| job_ids_to_add.contains(&x.id))
@@ -101,7 +110,7 @@ async fn send_scheduled_message(
     }
 
     let media_infos = repository.media_info_by_cron_job_id(cron_job.id).await?;
-    let media_info = get_random_media_info(&media_infos);
+    let media_info = choose_random_media_info(&media_infos);
     if media_info.is_none() {
         return Err(anyhow!(
             "No media found for cron job '{}'",

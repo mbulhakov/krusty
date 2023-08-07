@@ -2,7 +2,6 @@ use fancy_regex::Regex;
 use levenshtein::levenshtein;
 use mockall::predicate::*;
 use ordered_float::OrderedFloat;
-use ordslice::Ext;
 use percentage::PercentageDecimal;
 use rand::seq::SliceRandom;
 use std::cmp::max;
@@ -17,20 +16,23 @@ pub fn recognize_tag_in_tokens(
     tag_provider: &impl TagProvider,
     similarity_threshold: &PercentageDecimal,
 ) -> Option<String> {
-    let tokens = token_provider
+    let tokens: Vec<_> = token_provider
         .provide()
         .iter()
         .map(|x| x.to_lowercase())
-        .collect::<Vec<_>>();
+        .collect();
     let tokens: Vec<_> = tokens.iter().map(String::as_str).collect();
 
-    let mut tags: Vec<_> = tag_provider.tags().iter().collect();
-    tags.sort_by(|a, b| a.is_regexp.cmp(&b.is_regexp));
+    let tags = tag_provider.tags();
 
-    let (ordinary_tags, regexp_tags) =
-        tags.split_at(tags.lower_bound_by(|x| x.is_regexp.cmp(&true)));
+    let ordinary_tag_iter = tags.iter().filter(|x| !x.is_regexp);
+    let regexp_tag_iter = tags.iter().filter(|x| x.is_regexp);
 
-    let matched_regexps = process_regexp_tags(regexp_tags, token_provider.source(), &tokens);
+    let matched_regexps = process_regexp_tags(
+        regexp_tag_iter,
+        token_provider.source(),
+        tokens.iter().copied(),
+    );
     if !matched_regexps.is_empty() {
         let mr = matched_regexps.choose(&mut rand::thread_rng()).unwrap();
         log::debug!("Found matched regexp: '{}'", mr);
@@ -38,9 +40,9 @@ pub fn recognize_tag_in_tokens(
     }
 
     let tags_to_scores = process_ordinary_tags(
-        ordinary_tags,
+        ordinary_tag_iter,
         token_provider.source(),
-        &tokens,
+        tokens,
         similarity_threshold,
     );
 
@@ -54,15 +56,15 @@ pub fn recognize_tag_in_tokens(
     }
 }
 
-fn process_ordinary_tags<'a>(
-    tags: &[&'a Tag],
+fn process_ordinary_tags<'a, 'b>(
+    tag_iter: impl IntoIterator<Item = &'a Tag>,
     source_text: &str,
-    tokens: &[&str],
+    token_iter: impl IntoIterator<Item = &'b str> + Clone,
     similarity_threshold: &PercentageDecimal,
 ) -> BTreeMap<OrderedFloat<f64>, Vec<&'a str>> {
     let mut token_tags = Vec::new();
     let mut source_text_tags = Vec::new();
-    for t in tags {
+    for t in tag_iter {
         if t.for_whole_text {
             source_text_tags.push(t.text.as_str());
         } else {
@@ -70,27 +72,28 @@ fn process_ordinary_tags<'a>(
         }
     }
 
-    let matches = extract_matched_tags(&[source_text], &source_text_tags, similarity_threshold);
+    let matches = extract_matched_tags(
+        std::iter::once(source_text),
+        source_text_tags.iter().copied(),
+        similarity_threshold,
+    );
     if !matches.is_empty() {
         return matches;
     }
 
-    extract_matched_tags(tokens, &token_tags, similarity_threshold)
+    extract_matched_tags(token_iter, token_tags.iter().copied(), similarity_threshold)
 }
 
-fn extract_matched_tags<'a>(
-    tokens: &[&str],
-    tags: &[&'a str],
+fn extract_matched_tags<'a, 'b>(
+    token_iter: impl IntoIterator<Item = &'a str> + Clone,
+    tag_iter: impl IntoIterator<Item = &'b str>,
     similarity_threshold: &PercentageDecimal,
-) -> BTreeMap<OrderedFloat<f64>, Vec<&'a str>> {
-    let mut tags_to_scores: BTreeMap<OrderedFloat<f64>, Vec<&'a str>> = BTreeMap::new();
-    for tag in tags {
-        if let Some(OrderedFloat(score)) = get_min_score(tag, tokens) {
-            if score <= similarity_threshold.value() {
-                tags_to_scores
-                    .entry(OrderedFloat::from(score))
-                    .or_insert(Default::default())
-                    .push(tag);
+) -> BTreeMap<OrderedFloat<f64>, Vec<&'b str>> {
+    let mut tags_to_scores: BTreeMap<_, Vec<_>> = BTreeMap::new();
+    for tag in tag_iter {
+        if let Some(score) = get_min_score(tag, token_iter.clone()) {
+            if score.into_inner() <= similarity_threshold.value() {
+                tags_to_scores.entry(score).or_default().push(tag);
             }
         }
     }
@@ -102,10 +105,14 @@ fn score(x: &str, y: &str) -> f64 {
     levenshtein(x, y) as f64 / max(x.chars().count(), y.chars().count()) as f64
 }
 
-fn process_regexp_tags<'a>(tags: &[&'a Tag], source_text: &str, tokens: &[&str]) -> Vec<&'a str> {
+fn process_regexp_tags<'a, 'b>(
+    tag_iter: impl IntoIterator<Item = &'a Tag>,
+    source_text: &str,
+    token_iter: impl IntoIterator<Item = &'b str> + Clone,
+) -> Vec<&'a str> {
     let mut token_tags = Vec::new();
     let mut source_text_tags = Vec::new();
-    for t in tags {
+    for t in tag_iter {
         if t.for_whole_text {
             source_text_tags.push(t.text.as_str());
         } else {
@@ -113,21 +120,27 @@ fn process_regexp_tags<'a>(tags: &[&'a Tag], source_text: &str, tokens: &[&str])
         }
     }
 
-    let matches = extract_matched_regexps(&[source_text], &source_text_tags);
+    let matches = extract_matched_regexps(
+        std::iter::once(source_text),
+        source_text_tags.iter().copied(),
+    );
     if !matches.is_empty() {
         return matches;
     }
 
-    extract_matched_regexps(tokens, &token_tags)
+    extract_matched_regexps(token_iter, token_tags.iter().copied())
 }
 
-fn extract_matched_regexps<'a>(tokens: &[&str], patterns: &[&'a str]) -> Vec<&'a str> {
-    patterns
-        .iter()
+fn extract_matched_regexps<'a, 'b>(
+    token_iter: impl IntoIterator<Item = &'a str> + Clone,
+    pattern_iter: impl IntoIterator<Item = &'b str>,
+) -> Vec<&'b str> {
+    pattern_iter
+        .into_iter()
         .filter(|r| {
             let regexp = Regex::new(r);
             match regexp {
-                Ok(regexp) => tokens.iter().any(|w| {
+                Ok(regexp) => token_iter.clone().into_iter().any(|w| {
                     regexp.is_match(w).unwrap_or_log()
                         || regexp.is_match(&w.to_lowercase()).unwrap_or_log()
                 }),
@@ -137,15 +150,16 @@ fn extract_matched_regexps<'a>(tokens: &[&str], patterns: &[&'a str]) -> Vec<&'a
                 }
             }
         })
-        .copied()
         .collect()
 }
 
-fn get_min_score(tag: &str, tokens: &[&str]) -> Option<OrderedFloat<f64>> {
-    tokens
-        .iter()
-        .map(|x| score(x, tag))
-        .map(OrderedFloat::from)
+fn get_min_score<'a>(
+    tag: &str,
+    token_iter: impl IntoIterator<Item = &'a str>,
+) -> Option<OrderedFloat<f64>> {
+    token_iter
+        .into_iter()
+        .map(|x| OrderedFloat::from(score(x, tag)))
         .min()
 }
 

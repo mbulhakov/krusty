@@ -7,7 +7,7 @@ use crate::{
     bot::{
         cache::media_info_by_feature_type,
         ctx::Ctx,
-        utils::{get_random_media_info, is_time_passed, send_media},
+        utils::{choose_random_media_info, is_time_passed, send_media},
     },
     database::types::{ForwardedMessage, MediaFeatureType},
 };
@@ -44,7 +44,7 @@ pub async fn send_media_if_forwarded_before(
         )
         .await?;
 
-        if let Some(media) = get_random_media_info(&media_infos) {
+        if let Some(media) = choose_random_media_info(&media_infos) {
             {
                 log::debug!("Locking duplicate forward chat mutex");
                 let mut chat_times = ctx.duplicate_forward_timestamps.lock().await;

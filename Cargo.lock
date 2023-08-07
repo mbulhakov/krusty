@@ -1035,7 +1035,7 @@ dependencies = [
 
 [[package]]
 name = "krusty"
-version = "1.1.13"
+version = "1.1.14"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1055,7 +1055,6 @@ dependencies = [
  "mockall",
  "openssl",
  "ordered-float 3.7.0",
- "ordslice",
  "percentage",
  "rand",
  "remove_dir_all",
@@ -1502,12 +1501,6 @@ checksum = "2fc2dbde8f8a79f2102cc474ceb0ad68e3b80b85289ea62389b60e66777e4213"
 dependencies = [
  "num-traits",
 ]
-
-[[package]]
-name = "ordslice"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd20eec3dbe4376829cb7d80ae6ac45e0a766831dca50202ff2d40db46a8a024"
 
 [[package]]
 name = "parking_lot"

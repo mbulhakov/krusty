@@ -116,7 +116,7 @@ pub async fn send_media(
     Ok(())
 }
 
-pub fn get_random_media_info(media_infos: &[MediaInfo]) -> Option<&MediaInfo> {
+pub fn choose_random_media_info(media_infos: &[MediaInfo]) -> Option<&MediaInfo> {
     media_infos.choose(&mut rand::thread_rng())
 }
 

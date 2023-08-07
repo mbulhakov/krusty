@@ -10,7 +10,7 @@ use teloxide::{prelude::*, Bot};
 
 use crate::bot::cache::media_info_by_tag_text;
 use crate::bot::ctx::Ctx;
-use crate::bot::utils::{is_time_passed, send_media};
+use crate::bot::utils::{choose_random_media_info, is_time_passed, send_media};
 use crate::database::repository::AsyncRepository;
 use crate::database::types::MediaInfo;
 
@@ -80,7 +80,7 @@ async fn get_random_media_info_for_tag(
     };
 
     if let Some(media_infos) = media_infos {
-        return Some(media_infos[rand::thread_rng().gen::<usize>() % media_infos.len()].to_owned());
+        return choose_random_media_info(&media_infos).cloned();
     }
 
     log::warn!("No media associated with tag");

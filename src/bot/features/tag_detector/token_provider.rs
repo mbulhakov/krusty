@@ -1,11 +1,6 @@
 use mockall::automock;
 use teloxide::prelude::*;
 use teloxide::types::MessageEntityKind;
-
-fn is_separator(ch: char) -> bool {
-    matches!(ch, ' '..='/' | ':'..='@' | '\\'..='`')
-}
-
 #[automock]
 pub trait TokenProvider {
     fn provide(&self) -> Vec<String>;
@@ -53,16 +48,16 @@ fn split_text<'a>(
     let mut text_chunks = Vec::new();
 
     while !source.is_empty() {
-        if let Some(url) = excluded_ordered_substrings.next() {
-            let idx = source.find(url);
+        if let Some(substr) = excluded_ordered_substrings.next() {
+            let idx = source.find(substr);
             if idx.is_none() {
-                log::warn!("Url was not found in text/caption");
+                log::warn!("Substring was not found in text");
                 continue;
             }
 
             let idx = idx.unwrap();
             text_chunks.push(&source[..idx]);
-            source = &source[idx + url.len()..];
+            source = &source[idx + substr.len()..];
         } else {
             text_chunks.push(source);
             break;
@@ -75,6 +70,10 @@ fn split_text<'a>(
         .filter(|s| !s.is_empty())
         .map(str::to_string)
         .collect()
+}
+
+fn is_separator(ch: char) -> bool {
+    matches!(ch, ' '..='/' | ':'..='@' | '\\'..='`')
 }
 
 #[cfg(test)]
