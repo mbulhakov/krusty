@@ -374,7 +374,7 @@ mod tests {
         let mut tag_provider = MockTagProvider::new();
         tag_provider.expect_tags().return_const(vec![
             regexp_token_tag(".*"),
-            regexp_text_tag(r#"^(?=(?:[^\p{Ll}]*[\p{Lu}]){2})[^\p{Ll}]+$"#), // match string if all letters, including utf-8 ones, are uppercase
+            regexp_text_tag(r"^(?=(?:[^\p{Ll}]*[\p{Lu}]){2})[^\p{Ll}]+$"), // match string if all letters, including utf-8 ones, are uppercase
         ]);
 
         let mut token_provider = MockTokenProvider::new();
@@ -393,7 +393,7 @@ mod tests {
         );
         assert_eq!(
             actual,
-            Some(r#"^(?=(?:[^\p{Ll}]*[\p{Lu}]){2})[^\p{Ll}]+$"#.to_string())
+            Some(r"^(?=(?:[^\p{Ll}]*[\p{Lu}]){2})[^\p{Ll}]+$".to_string())
         );
     }
 

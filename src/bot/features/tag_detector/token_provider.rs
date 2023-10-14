@@ -84,7 +84,7 @@ mod tests {
     fn test_text_few_exclusion() {
         let actual = split_text(
             "some random text with exc1 custom exc2 exclusions",
-            vec!["exc1", "exc2"].iter().copied(),
+            ["exc1", "exc2"].iter().copied(),
         );
 
         let expected = vec!["some", "random", "text", "with", "custom", "exclusions"];
@@ -95,7 +95,7 @@ mod tests {
     fn test_text_few_exclusion_wrong_order() {
         let actual = split_text(
             "some random text with exc1 custom exc2 exclusions",
-            vec!["exc2", "exc1"].iter().copied(),
+            ["exc2", "exc1"].iter().copied(),
         );
 
         let expected = vec![
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_no_text_few_exclusions() {
-        let actual = split_text("", vec!["exc2", "exc1"].iter().copied());
+        let actual = split_text("", ["exc2", "exc1"].iter().copied());
 
         let expected = Vec::<&str>::new();
         assert_eq!(actual, expected);
@@ -136,7 +136,7 @@ mod tests {
 
     #[test]
     fn test_text_exclusion_at_the_end() {
-        let actual = split_text("some random text exc2", vec!["exc2"].iter().copied());
+        let actual = split_text("some random text exc2", ["exc2"].iter().copied());
 
         let expected = vec!["some", "random", "text"];
         assert_eq!(actual, expected);
